@@ -16,6 +16,7 @@ class DataFetcher:
     def __init__(self):
         self.w3 = Web3(Web3.HTTPProvider(config.ETH_RPC_URL))
         self.session = requests.Session()
+        self.multi_protocol = MultiProtocolFetcher(self.w3)
         
     def fetch_coingecko_data(self, token_ids: List[str]) -> Dict:
         """Fetch market data from CoinGecko"""
