@@ -264,6 +264,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Fetch DeFi data')
     parser.add_argument('--once', action='store_true', help='Run once and exit')
+    parser.add_argument('--all-protocols', action='store_true', help='Fetch all protocols')
     parser.add_argument('--synthetic', action='store_true', help='Generate synthetic data')
     parser.add_argument('--pool', default='0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc',
                         help='Pool address')
@@ -274,7 +275,11 @@ if __name__ == "__main__":
     
     fetcher = DataFetcher()
     
-    if args.synthetic:
+    if args.all_protocols:
+        print("Fetching data from all DeFi protocols...")
+        snapshot_ids = fetcher.fetch_all_protocols()
+        print(f"\n✓ Successfully created {len(snapshot_ids)} snapshots")
+    elif args.synthetic:
         print("Generating synthetic data...")
         fetcher.generate_synthetic_data('test_pool_1', 200)
         fetcher.generate_synthetic_data('test_pool_2', 200)
