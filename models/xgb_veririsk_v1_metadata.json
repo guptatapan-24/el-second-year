@@ -1,48 +1,48 @@
 {
   "model_name": "xgb_veririsk_v1",
-  "sha256": "3f7a3bd11d3a73658f822a928550dca8d31d4e560f97788e41f4dd495224c80e",
+  "sha256": "cf19c081c2ef1559b2468025f8b28767e5272c57245b1309d7d4b1dcfbe5da37",
   "ipfs_cid": "Qm...",
-  "train_date": "2025-11-23T09:56:42.995069",
+  "train_date": "2025-11-23T09:56:56.963155",
   "metrics": {
-    "auc": 0.5,
-    "n_train": 14,
-    "n_test": 4,
+    "auc": 1.0,
+    "n_train": 334,
+    "n_test": 84,
     "feature_importance": [
       {
-        "feature": "tvl",
-        "importance": 0.0
-      },
-      {
-        "feature": "reserve0",
-        "importance": 0.0
-      },
-      {
-        "feature": "reserve1",
-        "importance": 0.0
-      },
-      {
-        "feature": "volume_24h",
-        "importance": 0.0
-      },
-      {
-        "feature": "tvl_pct_change_1h",
-        "importance": 0.0
+        "feature": "volatility_24h",
+        "importance": 0.7830882668495178
       },
       {
         "feature": "reserve_imbalance",
-        "importance": 0.0
+        "importance": 0.04626452550292015
       },
       {
-        "feature": "volume_tvl_ratio",
-        "importance": 0.0
+        "feature": "tvl",
+        "importance": 0.02953651174902916
       },
       {
-        "feature": "volatility_24h",
-        "importance": 0.0
+        "feature": "reserve0",
+        "importance": 0.028548985719680786
+      },
+      {
+        "feature": "volume_24h",
+        "importance": 0.025418337434530258
       },
       {
         "feature": "leverage_ratio",
-        "importance": 0.0
+        "importance": 0.024554824456572533
+      },
+      {
+        "feature": "tvl_pct_change_1h",
+        "importance": 0.021744728088378906
+      },
+      {
+        "feature": "volume_tvl_ratio",
+        "importance": 0.021574795246124268
+      },
+      {
+        "feature": "reserve1",
+        "importance": 0.01926899515092373
       }
     ]
   },
