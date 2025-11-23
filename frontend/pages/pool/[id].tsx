@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import axios from 'axios';
 import RiskBadge from '../../components/RiskBadge';
+import RiskGauge from '../../components/RiskGauge';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatDistanceToNow, format } from 'date-fns';
 
