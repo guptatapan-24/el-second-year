@@ -5,7 +5,9 @@ Evaluates model performance on historical data
 """
 
 import sys
+import os
 sys.path.append('../backend')
+os.chdir('../backend')
 
 import pandas as pd
 import numpy as np
