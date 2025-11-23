@@ -1,48 +1,48 @@
 {
   "model_name": "xgb_veririsk_v1",
-  "sha256": "cf19c081c2ef1559b2468025f8b28767e5272c57245b1309d7d4b1dcfbe5da37",
+  "sha256": "ee5e795274b602d014688d453b64d74c4aef8e0e27f5f2fc6be2b85ca5bacc8e",
   "ipfs_cid": "Qm...",
-  "train_date": "2025-11-23T09:56:56.963155",
+  "train_date": "2025-11-23T10:13:44.072923",
   "metrics": {
     "auc": 1.0,
-    "n_train": 334,
-    "n_test": 84,
+    "n_train": 320,
+    "n_test": 80,
     "feature_importance": [
       {
         "feature": "volatility_24h",
-        "importance": 0.7830882668495178
-      },
-      {
-        "feature": "reserve_imbalance",
-        "importance": 0.04626452550292015
-      },
-      {
-        "feature": "tvl",
-        "importance": 0.02953651174902916
-      },
-      {
-        "feature": "reserve0",
-        "importance": 0.028548985719680786
-      },
-      {
-        "feature": "volume_24h",
-        "importance": 0.025418337434530258
-      },
-      {
-        "feature": "leverage_ratio",
-        "importance": 0.024554824456572533
-      },
-      {
-        "feature": "tvl_pct_change_1h",
-        "importance": 0.021744728088378906
+        "importance": 0.8718479871749878
       },
       {
         "feature": "volume_tvl_ratio",
-        "importance": 0.021574795246124268
+        "importance": 0.025976672768592834
+      },
+      {
+        "feature": "reserve0",
+        "importance": 0.018265951424837112
       },
       {
         "feature": "reserve1",
-        "importance": 0.01926899515092373
+        "importance": 0.01771361567080021
+      },
+      {
+        "feature": "reserve_imbalance",
+        "importance": 0.015255768783390522
+      },
+      {
+        "feature": "leverage_ratio",
+        "importance": 0.014476859010756016
+      },
+      {
+        "feature": "tvl_pct_change_1h",
+        "importance": 0.013684550300240517
+      },
+      {
+        "feature": "volume_24h",
+        "importance": 0.012512009590864182
+      },
+      {
+        "feature": "tvl",
+        "importance": 0.010266445577144623
       }
     ]
   },
