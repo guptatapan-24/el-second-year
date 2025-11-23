@@ -118,7 +118,7 @@ class ChainSubmitter:
             signed_tx = self.account.sign_transaction(tx)
             
             # Send transaction
-            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
             tx_hash_hex = tx_hash.hex()
             
             print(f"Transaction sent: {tx_hash_hex}")
