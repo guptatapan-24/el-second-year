@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""IPFS uploader for model artifacts and explanations using Infura IPFS"""
+"""IPFS uploader for model artifacts and explanations using web3.storage"""
 
 import requests
 import json
@@ -7,23 +7,23 @@ import os
 import sys
 import argparse
 from pathlib import Path
+import hashlib
 
 class IPFSUploader:
-    def __init__(self, project_id=None, project_secret=None):
-        """Initialize IPFS uploader with Infura credentials"""
-        self.project_id = project_id or os.getenv('INFURA_IPFS_PROJECT_ID', os.getenv('INFURA_PROJECT_ID'))
-        self.project_secret = project_secret or os.getenv('INFURA_IPFS_PROJECT_SECRET', '')
+    def __init__(self, api_token=None):
+        """Initialize IPFS uploader with web3.storage (free public IPFS service)"""
+        self.api_token = api_token or os.getenv('WEB3_STORAGE_TOKEN', '')
         
-        # Infura IPFS API endpoint
-        self.api_url = 'https://ipfs.infura.io:5001/api/v0'
+        # Use web3.storage free API
+        self.api_url = 'https://api.web3.storage'
         
-        # Setup auth if credentials provided
-        self.auth = None
-        if self.project_id and self.project_secret:
-            self.auth = (self.project_id, self.project_secret)
-        elif self.project_id:
-            # If only project_id is provided, use it as basic auth username with empty password
-            self.auth = (self.project_id, '')
+        # For demo: use ipfs.tech public gateway
+        self.public_gateway = 'https://w3s.link/ipfs'
+        
+        # Setup headers
+        self.headers = {}
+        if self.api_token:
+            self.headers['Authorization'] = f'Bearer {self.api_token}'
     
     def upload_file(self, file_path: str, pin: bool = True) -> dict:
         """
