@@ -221,12 +221,83 @@ async def get_snapshots(pool_id: Optional[str] = None, limit: int = 50):
                 "timestamp": s.timestamp.isoformat(),
                 "tvl": s.tvl,
                 "volume_24h": s.volume_24h,
-                "features": s.features
+                "features": s.features,
+                "source": s.source
             }
             for s in snapshots
         ]
     finally:
         db.close()
+
+@app.get("/protocols")
+async def get_protocols():
+    """Get list of all monitored protocols"""
+    db = next(get_db())
+    try:
+        # Get unique pool_ids with their latest data
+        from sqlalchemy import func
+        
+        subquery = db.query(
+            Snapshot.pool_id,
+            func.max(Snapshot.timestamp).label('latest_timestamp')
+        ).group_by(Snapshot.pool_id).subquery()
+        
+        snapshots = db.query(Snapshot).join(
+            subquery,
+            (Snapshot.pool_id == subquery.c.pool_id) & 
+            (Snapshot.timestamp == subquery.c.latest_timestamp)
+        ).all()
+        
+        protocols = []
+        for s in snapshots:
+            # Determine protocol type and display name
+            pool_id = s.pool_id
+            if 'uniswap_v2' in pool_id:
+                protocol_type = 'Uniswap V2'
+                category = 'DEX'
+            elif 'uniswap_v3' in pool_id:
+                protocol_type = 'Uniswap V3'
+                category = 'DEX'
+            elif 'aave' in pool_id:
+                protocol_type = 'Aave V3'
+                category = 'Lending'
+            elif 'compound' in pool_id:
+                protocol_type = 'Compound V2'
+                category = 'Lending'
+            elif 'curve' in pool_id:
+                protocol_type = 'Curve'
+                category = 'DEX'
+            else:
+                protocol_type = s.source or 'Unknown'
+                category = 'Other'
+            
+            protocols.append({
+                'pool_id': pool_id,
+                'protocol': protocol_type,
+                'category': category,
+                'tvl': s.tvl,
+                'volume_24h': s.volume_24h,
+                'last_update': s.timestamp.isoformat()
+            })
+        
+        return protocols
+    finally:
+        db.close()
+
+@app.post("/fetch_protocols")
+async def fetch_protocols():
+    """Trigger fetch for all protocols"""
+    from data_fetcher import DataFetcher
+    try:
+        fetcher = DataFetcher()
+        snapshot_ids = fetcher.fetch_all_protocols()
+        return {
+            "success": True,
+            "message": f"Fetched data for {len(snapshot_ids)} protocols",
+            "snapshot_ids": snapshot_ids
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
