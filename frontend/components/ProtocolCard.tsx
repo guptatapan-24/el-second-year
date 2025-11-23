@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import RiskBadge from './RiskBadge';
+import RiskGauge from './RiskGauge';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProtocolCardProps {
