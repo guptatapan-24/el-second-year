@@ -1,0 +1,48 @@
+{
+  "auc": 1.0,
+  "classification_report": {
+    "0": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 254.0
+    },
+    "1": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 146.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 400.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 400.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      254,
+      0
+    ],
+    [
+      0,
+      146
+    ]
+  ],
+  "lead_time_stats": {
+    "mean_lead_time_hours": 606.9583333333334,
+    "median_lead_time_hours": 603.0,
+    "min_lead_time_hours": 24.0,
+    "max_lead_time_hours": 1170.0,
+    "total_warnings": 144
+  },
+  "timestamp": "2025-11-23T09:27:41.340713"
+}
