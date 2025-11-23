@@ -65,6 +65,9 @@ export default function Home() {
               <Link href="/" className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">
                 Dashboard
               </Link>
+              <Link href="/protocols" className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                🌐 Multi-Protocol
+              </Link>
               <Link href="/admin" className="px-4 py-2 text-white bg-gray-700 rounded-lg hover:bg-gray-600">
                 Admin
               </Link>
