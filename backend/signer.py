@@ -46,12 +46,36 @@ class PayloadSigner:
         return payload
     
     def sign_payload(self, payload: Dict) -> Dict:
-        """Sign payload and return signature"""
-        # Create canonical JSON
-        canonical = self.canonical_json(payload)
+        """Sign payload using Solidity-compatible encoding"""
+        from web3 import Web3
         
-        # Hash the payload
-        message_hash = hashlib.sha256(canonical.encode()).digest()
+        # Convert pool_id to bytes32
+        pool_id_str = payload['pool_id']
+        if pool_id_str.startswith('0x') and len(pool_id_str) == 66:
+            pool_id_bytes32 = bytes.fromhex(pool_id_str[2:])
+        else:
+            pool_id_bytes32 = Web3.keccak(text=pool_id_str)
+        
+        # Convert CID to bytes32 hash
+        cid = payload.get('artifact_cid', 'QmDefault')
+        cid_hash = Web3.keccak(text=cid)
+        
+        # Prepare parameters matching Solidity: (poolId, score, timestamp, cidHash, nonce)
+        score = int(payload['risk_score'])
+        timestamp = payload['timestamp']
+        nonce = payload['nonce']
+        
+        # Create hash matching Solidity: keccak256(abi.encodePacked(...))
+        # Note: abi.encodePacked doesn't pad values
+        packed_data = (
+            pool_id_bytes32 +
+            score.to_bytes(2, 'big') +  # uint16
+            timestamp.to_bytes(32, 'big') +  # uint256
+            cid_hash +  # bytes32
+            nonce.to_bytes(32, 'big')  # uint256
+        )
+        
+        message_hash = Web3.keccak(packed_data)
         
         # Create Ethereum signed message
         message = encode_defunct(primitive=message_hash)
@@ -63,6 +87,8 @@ class PayloadSigner:
         signed_payload = payload.copy()
         signed_payload['signature'] = signed_message.signature.hex()
         signed_payload['signer_address'] = self.address
+        signed_payload['_pool_id_bytes32'] = pool_id_bytes32.hex()
+        signed_payload['_cid_hash'] = cid_hash.hex()
         
         return signed_payload
     
