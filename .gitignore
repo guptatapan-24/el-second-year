@@ -29,11 +29,12 @@ env/
 # Jupyter
 .ipynb_checkpoints
 
-# ML Models
-*.pkl
+# ML Models (allow specific model files)
 *.joblib
 *.h5
 *.pth
+# Allow .pkl files for trained models
+# *.pkl
 
 # Node
 node_modules/
@@ -45,8 +46,8 @@ yarn-error.log
 .next/
 out/
 
-# Environment
-.env
+# Environment (allow .env for deployment)
+# .env
 .env.local
 .env*.local
 
