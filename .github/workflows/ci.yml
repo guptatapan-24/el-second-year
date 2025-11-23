@@ -1,0 +1,91 @@
+name: VeriRisk CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Generate test data
+      run: |
+        cd backend
+        python data_fetcher.py --synthetic
+    
+    - name: Train model
+      run: |
+        cd backend
+        python model_trainer.py
+    
+    - name: Test inference
+      run: |
+        cd backend
+        python model_server.py --run-once --pool test_pool_1
+    
+    - name: Test signing
+      run: |
+        cd backend
+        python signer.py --test-sign
+
+  contract-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd contracts
+        yarn install
+    
+    - name: Compile contracts
+      run: |
+        cd contracts
+        npx hardhat compile
+    
+    - name: Run tests
+      run: |
+        cd contracts
+        npx hardhat test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        yarn install
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        yarn build

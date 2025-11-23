@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend:/app
+      - ./models:/models
+    env_file:
+      - ./backend/.env
+    command: uvicorn api_server:app --host 0.0.0.0 --port 8001 --reload
+    networks:
+      - veririsk
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env.local
+    command: yarn dev
+    depends_on:
+      - backend
+    networks:
+      - veririsk
+
+networks:
+  veririsk:
+    driver: bridge
