@@ -75,6 +75,13 @@ export default function ProtocolCard({
           {risk_score !== undefined && <RiskBadge score={risk_score} />}
         </div>
 
+        {/* Gauge Visualization */}
+        {risk_score !== undefined && (
+          <div className="py-4 flex justify-center bg-gradient-to-b from-gray-800/50 to-transparent rounded-lg mb-4">
+            <RiskGauge score={risk_score} size={140} showLabel={false} />
+          </div>
+        )}
+
         {/* Metrics */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
