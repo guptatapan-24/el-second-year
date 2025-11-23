@@ -1,0 +1,9 @@
+{
+  "network": "sepolia",
+  "deployer": "0x5ECc9815C951F2e5248d8A92B1653bd198613937",
+  "contracts": {
+    "VeriRiskOracle": "0xE533fBe0139d0c44B15d3ae78480b2D9D752b34F",
+    "ConsumerDemo": "0x2439d79149625c1F2706dB75808955b6FFe832Ff"
+  },
+  "timestamp": "2025-11-23T08:37:36.913Z"
+}
