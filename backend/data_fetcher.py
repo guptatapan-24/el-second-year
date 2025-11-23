@@ -8,7 +8,9 @@ from typing import Dict, List, Optional
 from web3 import Web3
 from config import config
 from database import SessionLocal, Snapshot, init_db
+from protocols import MultiProtocolFetcher
 import hashlib
+import random
 
 class DataFetcher:
     def __init__(self):
