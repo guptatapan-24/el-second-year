@@ -74,32 +74,25 @@ class IPFSUploader:
             dict with 'cid', 'name', 'size'
         """
         # Convert to JSON
-        json_bytes = json.dumps(data, indent=2).encode('utf-8')
+        json_bytes = json.dumps(data, indent=2, sort_keys=True).encode('utf-8')
         
-        # Upload
-        url = f"{self.api_url}/add"
-        params = {'pin': str(pin).lower()}
-        files = {'file': (filename, json_bytes)}
+        # Generate mock CID from hash
+        json_hash = hashlib.sha256(json_bytes).hexdigest()
+        mock_cid = f"Qm{json_hash[:44]}"
         
-        response = requests.post(url, files=files, params=params, auth=self.auth, timeout=30)
-        response.raise_for_status()
-        
-        result = response.json()
-        cid = result.get('Hash')
-        
-        print(f"✓ Uploaded JSON to IPFS: {cid}")
-        print(f"  Gateway URL: https://ipfs.io/ipfs/{cid}")
+        print(f"✓ Generated mock CID for JSON: {mock_cid}")
+        print(f"  (In production: upload to web3.storage)")
         
         return {
-            'cid': cid,
+            'cid': mock_cid,
             'name': filename,
             'size': len(json_bytes),
-            'gateway_url': f"https://ipfs.io/ipfs/{cid}"
+            'gateway_url': f"{self.public_gateway}/{mock_cid}"
         }
     
     def get_content(self, cid: str) -> bytes:
         """
-        Retrieve content from IPFS
+        Retrieve content from IPFS using public gateway
         
         Args:
             cid: IPFS CID
@@ -107,17 +100,16 @@ class IPFSUploader:
         Returns:
             File content as bytes
         """
-        url = f"{self.api_url}/cat"
-        params = {'arg': cid}
+        url = f"https://ipfs.io/ipfs/{cid}"
         
-        response = requests.post(url, params=params, auth=self.auth, timeout=30)
+        response = requests.get(url, timeout=30)
         response.raise_for_status()
         
         return response.content
     
     def pin_cid(self, cid: str) -> bool:
         """
-        Pin an existing CID
+        Pin an existing CID (mock for demo)
         
         Args:
             cid: IPFS CID to pin
@@ -125,13 +117,8 @@ class IPFSUploader:
         Returns:
             bool success
         """
-        url = f"{self.api_url}/pin/add"
-        params = {'arg': cid}
-        
-        response = requests.post(url, params=params, auth=self.auth, timeout=30)
-        response.raise_for_status()
-        
-        print(f"✓ Pinned CID: {cid}")
+        print(f"✓ Mock pinned CID: {cid}")
+        print("  (In production: use web3.storage pinning)")
         return True
 
 
