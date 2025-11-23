@@ -167,9 +167,52 @@ class DataFetcher:
             print(f"Error fetching/storing data for {pool_id}: {e}")
             return None
     
+    def fetch_all_protocols(self) -> List[str]:
+        """Fetch data from all supported DeFi protocols and store in database"""
+        protocols_data = self.multi_protocol.get_all_protocols()
+        snapshot_ids = []
+        
+        db = SessionLocal()
+        try:
+            for proto_data in protocols_data:
+                # Compute derived features
+                features = self.compute_derived_features(proto_data)
+                
+                # Add protocol-specific features
+                if proto_data['protocol'] in ['Aave V3', 'Compound V2']:
+                    features['utilization_rate'] = proto_data.get('utilization_rate', 0)
+                    features['supply_apy'] = proto_data.get('supply_apy', 0)
+                    features['borrow_apy'] = proto_data.get('borrow_apy', 0)
+                
+                # Create snapshot
+                snapshot_id = hashlib.sha256(
+                    f"{proto_data['pool_id']}-{datetime.utcnow().isoformat()}".encode()
+                ).hexdigest()[:16]
+                
+                snapshot = Snapshot(
+                    snapshot_id=snapshot_id,
+                    pool_id=proto_data['pool_id'],
+                    timestamp=datetime.utcnow(),
+                    tvl=proto_data.get('tvl', 0),
+                    reserve0=proto_data.get('reserve0', 0),
+                    reserve1=proto_data.get('reserve1', 0),
+                    volume_24h=proto_data.get('volume_24h', 0),
+                    oracle_price=proto_data.get('price', 1.0),
+                    features=features,
+                    source=proto_data['protocol']
+                )
+                db.add(snapshot)
+                snapshot_ids.append(snapshot_id)
+                print(f"Stored snapshot for {proto_data['display_name']}")
+            
+            db.commit()
+            print(f"\n✓ Successfully fetched and stored data for {len(protocols_data)} protocols")
+            return snapshot_ids
+        finally:
+            db.close()
+    
     def generate_synthetic_data(self, pool_id: str, num_samples: int = 100):
         """Generate synthetic DeFi data for testing"""
-        import random
         import numpy as np
         
         db = SessionLocal()
