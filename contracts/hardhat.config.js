@@ -19,8 +19,8 @@ module.exports = {
       url: "http://127.0.0.1:8545",
     },
     sepolia: {
-      url: process.env.ETH_RPC_URL || "https://sepolia.infura.io/v3/YOUR_KEY",
-      accounts: process.env.SIGNER_PRIVATE_KEY ? [process.env.SIGNER_PRIVATE_KEY] : [],
+      url: process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/f4f7ccc8d8a9467e8d04526b177ecc7f",
+      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : [],
       chainId: 11155111,
     },
   },
