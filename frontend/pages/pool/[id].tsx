@@ -113,37 +113,46 @@ export default function PoolDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Current Risk Score */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Score Card */}
+            {/* Score Card with Gauge */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700 p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Current Risk Assessment</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-6xl font-bold text-white" data-testid="risk-score">
-                    {latest.risk_score.toFixed(1)}
-                    <span className="text-2xl text-gray-400">/100</span>
-                  </div>
-                  <p className="text-gray-400 mt-2">
-                    Updated {formatDistanceToNow(new Date(latest.timestamp), { addSuffix: true })}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                {/* Gauge Visualization */}
+                <div className="flex justify-center">
+                  <RiskGauge score={latest.risk_score} size={240} showLabel={true} />
                 </div>
-                <div className="text-right">
-                  <div className={`text-sm px-3 py-1 rounded ${
-                    latest.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                    latest.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {latest.status.toUpperCase()}
+                
+                {/* Info */}
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-5xl font-bold text-white" data-testid="risk-score">
+                      {latest.risk_score.toFixed(1)}
+                      <span className="text-2xl text-gray-400">/100</span>
+                    </div>
+                    <p className="text-gray-400 mt-2">
+                      Updated {formatDistanceToNow(new Date(latest.timestamp), { addSuffix: true })}
+                    </p>
                   </div>
-                  {latest.tx_hash && (
-                    <a
-                      href={`https://sepolia.etherscan.io/tx/${latest.tx_hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block"
-                    >
-                      View on Explorer ↗
-                    </a>
-                  )}
+                  
+                  <div className="pt-4 border-t border-gray-700">
+                    <div className={`inline-block text-sm px-3 py-1 rounded ${
+                      latest.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
+                      latest.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {latest.status.toUpperCase()}
+                    </div>
+                    {latest.tx_hash && (
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${latest.tx_hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-blue-400 hover:text-blue-300 text-sm mt-2"
+                      >
+                        View on Explorer ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
