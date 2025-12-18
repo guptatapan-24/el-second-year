@@ -12,6 +12,8 @@ interface Protocol {
   tvl: number;
   volume_24h: number;
   last_update: string;
+  asset?: string;
+  data_source?: string;
 }
 
 interface RiskData {
