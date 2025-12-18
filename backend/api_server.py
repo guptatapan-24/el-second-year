@@ -271,13 +271,26 @@ async def get_protocols():
                 protocol_type = s.source or 'Unknown'
                 category = 'Other'
             
+            # Extract asset name from pool_id for better display
+            asset_name = pool_id.split('_')[-1].upper() if '_' in pool_id else pool_id
+            if 'uniswap' in pool_id:
+                # For uniswap pools, construct pair name
+                parts = pool_id.replace('uniswap_v2_', '').replace('uniswap_v3_', '').split('_')
+                asset_name = '-'.join([p.upper() for p in parts])
+            
+            # Check if data is from live source
+            features = s.features if isinstance(s.features, dict) else {}
+            is_synthetic = features.get('synthetic', s.source == 'synthetic')
+            
             protocols.append({
                 'pool_id': pool_id,
                 'protocol': protocol_type,
                 'category': category,
+                'asset': asset_name,
                 'tvl': s.tvl,
                 'volume_24h': s.volume_24h,
-                'last_update': s.timestamp.isoformat()
+                'last_update': s.timestamp.isoformat(),
+                'data_source': 'live' if not is_synthetic else 'synthetic'
             })
         
         return protocols
