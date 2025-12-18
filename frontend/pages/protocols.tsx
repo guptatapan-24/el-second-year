@@ -197,6 +197,8 @@ export default function Protocols() {
                     volume_24h={protocol.volume_24h}
                     risk_score={risks.get(protocol.pool_id)}
                     last_update={protocol.last_update}
+                    asset={protocol.asset}
+                    data_source={protocol.data_source}
                   />
                 ))}
               </div>
