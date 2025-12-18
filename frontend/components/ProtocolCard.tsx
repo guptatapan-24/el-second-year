@@ -2,6 +2,7 @@ import Link from 'next/link';
 import RiskBadge from './RiskBadge';
 import RiskGauge from './RiskGauge';
 import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
 interface ProtocolCardProps {
   pool_id: string;
@@ -11,6 +12,8 @@ interface ProtocolCardProps {
   volume_24h: number;
   risk_score?: number;
   last_update: string;
+  asset?: string;
+  data_source?: string;
 }
 
 const categoryColors: Record<string, string> = {
@@ -19,13 +22,22 @@ const categoryColors: Record<string, string> = {
   'Other': 'bg-gray-500/20 text-gray-400',
 };
 
-// Real protocol logo URLs
+// Real protocol logo URLs from official/trusted sources
 const protocolLogos: Record<string, string> = {
-  'Uniswap V2': 'https://cryptologos.cc/logos/uniswap-uni-logo.png',
-  'Uniswap V3': 'https://cryptologos.cc/logos/uniswap-uni-logo.png',
-  'Aave V3': 'https://cryptologos.cc/logos/aave-aave-logo.png',
-  'Compound V2': 'https://cryptologos.cc/logos/compound-comp-logo.png',
-  'Curve': 'https://cryptologos.cc/logos/curve-dao-token-crv-logo.png',
+  'Uniswap V2': 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png',
+  'Uniswap V3': 'https://assets.coingecko.com/coins/images/12504/small/uniswap-uni.png',
+  'Aave V3': 'https://assets.coingecko.com/coins/images/12645/small/AAVE.png',
+  'Compound V2': 'https://assets.coingecko.com/coins/images/10775/small/COMP.png',
+  'Curve': 'https://assets.coingecko.com/coins/images/12124/small/Curve.png',
+};
+
+// Fallback emoji icons
+const protocolEmojis: Record<string, string> = {
+  'Uniswap V2': '🦄',
+  'Uniswap V3': '🦄',
+  'Aave V3': '👻',
+  'Compound V2': '🏛️',
+  'Curve': '🌀',
 };
 
 export default function ProtocolCard({
@@ -35,8 +47,12 @@ export default function ProtocolCard({
   tvl,
   volume_24h,
   risk_score,
-  last_update
+  last_update,
+  asset,
+  data_source
 }: ProtocolCardProps) {
+  const [imageError, setImageError] = useState(false);
+  
   const formatCurrency = (value: number) => {
     if (value >= 1_000_000_000) {
       return `$${(value / 1_000_000_000).toFixed(2)}B`;
@@ -47,6 +63,20 @@ export default function ProtocolCard({
     }
     return `$${value.toFixed(2)}`;
   };
+
+  // Extract display name from pool_id or asset prop
+  const getDisplayName = () => {
+    if (asset) return asset;
+    // Parse pool_id like "uniswap_v2_usdc_eth" -> "USDC-ETH"
+    const parts = pool_id.split('_');
+    if (parts.length >= 3) {
+      return parts.slice(2).join('-').toUpperCase();
+    }
+    return pool_id.toUpperCase();
+  };
+
+  const logoUrl = protocolLogos[protocol];
+  const fallbackEmoji = protocolEmojis[protocol] || '📊';
 
   return (
     <Link
@@ -60,27 +90,34 @@ export default function ProtocolCard({
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
-            {protocolLogos[protocol] ? (
-              <img 
-                src={protocolLogos[protocol]} 
-                alt={protocol} 
-                className="w-10 h-10 rounded-full bg-white p-1"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-            ) : null}
-            <span className={`text-3xl ${protocolLogos[protocol] ? 'hidden' : ''}`}>📊</span>
+            {/* Protocol Logo */}
+            <div className="w-10 h-10 flex items-center justify-center">
+              {logoUrl && !imageError ? (
+                <img 
+                  src={logoUrl} 
+                  alt={protocol} 
+                  className="w-10 h-10 rounded-full bg-white p-0.5"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <span className="text-3xl">{fallbackEmoji}</span>
+              )}
+            </div>
             <div>
               <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
-                {pool_id.split('_').slice(2).join(' ').toUpperCase()}
+                {getDisplayName()}
               </h3>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-1 items-center">
                 <span className="text-xs text-gray-400">{protocol}</span>
                 <span className={`text-xs px-2 py-0.5 rounded ${categoryColors[category]}`}>
                   {category}
                 </span>
+                {data_source === 'live' && (
+                  <span className="flex items-center gap-1 text-xs text-green-400">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    Live
+                  </span>
+                )}
               </div>
             </div>
           </div>
