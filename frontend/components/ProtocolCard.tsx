@@ -19,12 +19,13 @@ const categoryColors: Record<string, string> = {
   'Other': 'bg-gray-500/20 text-gray-400',
 };
 
+// Real protocol logo URLs
 const protocolLogos: Record<string, string> = {
-  'Uniswap V2': '🦄',
-  'Uniswap V3': '🦄',
-  'Aave V3': '👻',
-  'Compound V2': '🏦',
-  'Curve': '🌊',
+  'Uniswap V2': 'https://cryptologos.cc/logos/uniswap-uni-logo.png',
+  'Uniswap V3': 'https://cryptologos.cc/logos/uniswap-uni-logo.png',
+  'Aave V3': 'https://cryptologos.cc/logos/aave-aave-logo.png',
+  'Compound V2': 'https://cryptologos.cc/logos/compound-comp-logo.png',
+  'Curve': 'https://cryptologos.cc/logos/curve-dao-token-crv-logo.png',
 };
 
 export default function ProtocolCard({
