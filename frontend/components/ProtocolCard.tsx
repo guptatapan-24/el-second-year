@@ -60,7 +60,18 @@ export default function ProtocolCard({
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{protocolLogos[protocol] || '📊'}</span>
+            {protocolLogos[protocol] ? (
+              <img 
+                src={protocolLogos[protocol]} 
+                alt={protocol} 
+                className="w-10 h-10 rounded-full bg-white p-1"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <span className={`text-3xl ${protocolLogos[protocol] ? 'hidden' : ''}`}>📊</span>
             <div>
               <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
                 {pool_id.split('_').slice(2).join(' ').toUpperCase()}
