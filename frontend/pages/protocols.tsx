@@ -68,14 +68,35 @@ export default function Protocols() {
     }
   };
 
+  // Initial fetch and auto-refresh
   useEffect(() => {
-    fetchProtocols();
+    const initialFetch = async () => {
+      await fetchProtocols();
+      // If no protocols found, trigger a fetch from live sources
+      if (protocols.length === 0) {
+        await handleFetchProtocols();
+      }
+    };
+    
+    initialFetch();
     
     if (autoRefresh) {
-      const interval = setInterval(fetchProtocols, 30000); // 30 seconds
+      const interval = setInterval(fetchProtocols, 15000); // 15 seconds for more responsive updates
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
+  
+  // Auto-fetch live data every 5 minutes
+  useEffect(() => {
+    const liveDataInterval = setInterval(async () => {
+      if (!isFetching) {
+        console.log('[Auto-fetch] Fetching live protocol data...');
+        await handleFetchProtocols();
+      }
+    }, 300000); // 5 minutes
+    
+    return () => clearInterval(liveDataInterval);
+  }, [isFetching]);
 
   // Filter protocols
   const filteredProtocols = protocols.filter(p => {
