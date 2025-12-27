@@ -170,6 +170,7 @@ class UniswapV2Fetcher(ProtocolFetcher):
     def _get_fallback_data(self, pool_name: str) -> Dict:
         """Generate realistic fallback data"""
         import random
+        logger.warning(f"⚠ Uniswap V2 {pool_name}: Using SYNTHETIC fallback data")
         return {
             'protocol': 'Uniswap V2',
             'pool_address': self.POPULAR_POOLS.get(pool_name, '0x...'),
