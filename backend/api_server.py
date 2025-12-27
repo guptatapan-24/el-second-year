@@ -101,15 +101,53 @@ class SignedPayloadResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "components": {
-            "model_server": model_server is not None,
-            "signer": signer is not None,
-            "submitter": submitter is not None
+    db = next(get_db())
+    try:
+        # Check data freshness
+        latest_snapshot = db.query(Snapshot).order_by(Snapshot.timestamp.desc()).first()
+        data_age_seconds = None
+        data_status = "no_data"
+        
+        if latest_snapshot:
+            from datetime import timedelta
+            age = datetime.utcnow() - latest_snapshot.timestamp
+            data_age_seconds = age.total_seconds()
+            
+            if data_age_seconds < 600:  # < 10 minutes
+                data_status = "fresh"
+            elif data_age_seconds < 3600:  # < 1 hour
+                data_status = "stale"
+            else:
+                data_status = "very_stale"
+        
+        # Count live vs synthetic data
+        recent_snapshots = db.query(Snapshot).order_by(Snapshot.timestamp.desc()).limit(50).all()
+        live_count = sum(1 for s in recent_snapshots if isinstance(s.features, dict) and not s.features.get('synthetic', s.source == 'synthetic'))
+        total_count = len(recent_snapshots)
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "components": {
+                "model_server": model_server is not None,
+                "signer": signer is not None,
+                "submitter": submitter is not None,
+                "scheduler": scheduler is not None and scheduler.scheduler.running if scheduler else False
+            },
+            "data_status": {
+                "status": data_status,
+                "latest_snapshot_age_seconds": data_age_seconds,
+                "latest_snapshot_time": latest_snapshot.timestamp.isoformat() if latest_snapshot else None,
+                "recent_snapshots": {
+                    "total": total_count,
+                    "live_data": live_count,
+                    "synthetic_data": total_count - live_count,
+                    "live_percentage": round(live_count / total_count * 100, 1) if total_count > 0 else 0
+                }
+            }
         }
-    }
+    finally:
+        db.close()
 
 @app.post("/infer", response_model=InferResponse)
 async def infer_risk(request: InferRequest):
