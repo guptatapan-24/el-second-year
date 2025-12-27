@@ -35,6 +35,7 @@ app.add_middleware(
 model_server = None
 signer = None
 submitter = None
+scheduler = None
 
 @app.on_event("startup")
 async def startup_event():
