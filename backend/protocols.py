@@ -44,17 +44,35 @@ class DeFiLlamaFetcher:
             'Accept': 'application/json',
             'User-Agent': 'VeriRisk/1.0'
         })
+        self.retry_attempts = 3
+        self.retry_delay = 2  # seconds
     
     def get_protocol_tvl(self, protocol_slug: str) -> Dict:
-        """Get TVL data for a specific protocol"""
-        try:
-            url = f"{self.BASE_URL}/protocol/{protocol_slug}"
-            response = self.session.get(url, timeout=15)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            print(f"DeFiLlama API error for {protocol_slug}: {e}")
-            return {}
+        """Get TVL data for a specific protocol with retry logic"""
+        for attempt in range(self.retry_attempts):
+            try:
+                url = f"{self.BASE_URL}/protocol/{protocol_slug}"
+                response = self.session.get(url, timeout=15)
+                response.raise_for_status()
+                data = response.json()
+                logger.debug(f"✓ DeFiLlama: {protocol_slug} - Success")
+                return data
+            except requests.exceptions.Timeout:
+                logger.warning(f"⚠ DeFiLlama: {protocol_slug} - Timeout (attempt {attempt + 1}/{self.retry_attempts})")
+                if attempt < self.retry_attempts - 1:
+                    time.sleep(self.retry_delay)
+                    continue
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"⚠ DeFiLlama: {protocol_slug} - Request error: {e} (attempt {attempt + 1}/{self.retry_attempts})")
+                if attempt < self.retry_attempts - 1:
+                    time.sleep(self.retry_delay)
+                    continue
+            except Exception as e:
+                logger.error(f"✗ DeFiLlama: {protocol_slug} - Unexpected error: {e}")
+                break
+        
+        logger.warning(f"⚠ DeFiLlama: {protocol_slug} - All attempts failed, will use fallback data")
+        return {}
     
     def get_all_protocols(self) -> List[Dict]:
         """Get all protocols overview"""
