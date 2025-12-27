@@ -545,54 +545,60 @@ class MultiProtocolFetcher:
         results = []
         self._last_fetch_time = datetime.utcnow()
         
-        print("\n[DATA FETCH] Starting multi-protocol fetch at", self._last_fetch_time.isoformat())
+        logger.info("=" * 70)
+        logger.info(f"🔄 STARTING MULTI-PROTOCOL DATA FETCH")
+        logger.info(f"   Time: {self._last_fetch_time.isoformat()}")
+        logger.info("=" * 70)
         
         # Uniswap V2
+        logger.info("\n📊 Fetching Uniswap V2 pools...")
         for name in self.uniswap_v2.POPULAR_POOLS.keys():
-            print(f"  Fetching Uniswap V2: {name}...")
             data = self.uniswap_v2.fetch_data(name)
             data['pool_id'] = f"uniswap_v2_{name.lower().replace('-', '_')}"
             data['display_name'] = f"Uniswap V2: {name}"
             results.append(data)
         
         # Uniswap V3
+        logger.info("\n📊 Fetching Uniswap V3 pools...")
         for name in self.uniswap_v3.POPULAR_POOLS.keys():
-            print(f"  Fetching Uniswap V3: {name}...")
             data = self.uniswap_v3.fetch_data(name)
             data['pool_id'] = f"uniswap_v3_{name.lower().replace('-', '_').replace('%', 'pct')}"
             data['display_name'] = f"Uniswap V3: {name}"
             results.append(data)
         
         # Aave
+        logger.info("\n📊 Fetching Aave V3 markets...")
         for asset in ['ETH', 'USDC', 'DAI', 'WBTC']:
-            print(f"  Fetching Aave V3: {asset}...")
             data = self.aave.fetch_data(asset)
             data['pool_id'] = f"aave_v3_{asset.lower()}"
             data['display_name'] = f"Aave V3: {asset}"
             results.append(data)
         
         # Compound
+        logger.info("\n📊 Fetching Compound V2 markets...")
         for asset in ['ETH', 'USDC', 'DAI', 'USDT']:
-            print(f"  Fetching Compound V2: {asset}...")
             data = self.compound.fetch_data(asset)
             data['pool_id'] = f"compound_v2_{asset.lower()}"
             data['display_name'] = f"Compound V2: {asset}"
             results.append(data)
         
         # Curve
+        logger.info("\n📊 Fetching Curve pools...")
         for pool_name in ['3pool', 'stETH', 'frax']:
-            print(f"  Fetching Curve: {pool_name}...")
             data = self.curve.fetch_data(pool_name)
             data['pool_id'] = f"curve_{pool_name.lower()}"
             data['display_name'] = f"Curve: {pool_name}"
             results.append(data)
         
-        print(f"\n[DATA FETCH] Complete! Fetched {len(results)} protocols")
-        
-        # Log data sources
+        # Summary statistics
         live_count = sum(1 for r in results if not r.get('synthetic', True))
         fallback_count = len(results) - live_count
-        print(f"  - Live data: {live_count} protocols")
-        print(f"  - Fallback data: {fallback_count} protocols")
+        
+        logger.info("\n" + "=" * 70)
+        logger.info(f"✅ FETCH COMPLETE!")
+        logger.info(f"   📊 Total protocols: {len(results)}")
+        logger.info(f"   🟢 Live data: {live_count} ({live_count/len(results)*100:.1f}%)")
+        logger.info(f"   🟡 Fallback data: {fallback_count} ({fallback_count/len(results)*100:.1f}%)")
+        logger.info("=" * 70)
         
         return results
