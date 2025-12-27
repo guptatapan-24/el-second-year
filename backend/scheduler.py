@@ -92,9 +92,9 @@ class RiskScheduler:
     
     def full_update_cycle(self):
         """Complete update cycle: fetch data + compute risks"""
-        print(f"\n{'='*60}")
-        print(f"Starting full update cycle at {datetime.utcnow()}")
-        print(f"{'='*60}")
+        logger.info("\n" + "="*60)
+        logger.info(f"🚀 Starting full update cycle at {datetime.utcnow()}")
+        logger.info("="*60)
         
         # Step 1: Fetch fresh data
         self.fetch_all_protocols_data()
@@ -103,15 +103,15 @@ class RiskScheduler:
         time.sleep(3)  # Brief pause between steps
         self.compute_and_submit_risks()
         
-        print(f"\n{'='*60}")
-        print(f"Cycle complete at {datetime.utcnow()}")
-        print(f"{'='*60}\n")
+        logger.info("\n" + "="*60)
+        logger.info(f"✅ Cycle complete at {datetime.utcnow()}")
+        logger.info("="*60 + "\n")
     
     def start(self):
         """Start the scheduler"""
-        print("VeriRisk Risk Scheduler Starting...")
-        print(f"Contract: {config.ORACLE_CONTRACT_ADDRESS}")
-        print(f"Signer: {self.signer.address}")
+        logger.info("🚀 VeriRisk Risk Scheduler Starting...")
+        logger.info(f"   📜 Contract: {config.ORACLE_CONTRACT_ADDRESS}")
+        logger.info(f"   🔑 Signer: {self.signer.address}")
         
         # Run immediately on start
         self.full_update_cycle()
@@ -145,10 +145,10 @@ class RiskScheduler:
         )
         
         self.scheduler.start()
-        print("✓ Scheduler started")
-        print("  - Data fetch: every 5 minutes")
-        print("  - Risk computation: every 10 minutes")
-        print("  - Full cycle: every 30 minutes")
+        logger.info("✅ Scheduler started successfully!")
+        logger.info("   ⏰ Data fetch: every 5 minutes")
+        logger.info("   📊 Risk computation: every 10 minutes")
+        logger.info("   🔄 Full cycle: every 30 minutes")
         
     def stop(self):
         """Stop the scheduler"""
