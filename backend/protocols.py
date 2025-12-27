@@ -123,15 +123,19 @@ class UniswapV2Fetcher(ProtocolFetcher):
             # Get Uniswap V2 protocol data
             protocol_data = self.llama.get_protocol_tvl('uniswap-v2')
             
-            # Calculate per-pool estimates based on protocol TVL
-            total_tvl = protocol_data.get('tvl', [])
-            current_tvl = total_tvl[-1].get('totalLiquidityUSD', 0) if total_tvl else 0
+            if not protocol_data or 'currentChainTvls' not in protocol_data:
+                logger.warning(f"Uniswap V2 {pool_name}: No protocol data, using fallback")
+                return self._get_fallback_data(pool_name)
             
             # Get chain TVL breakdown
             chain_tvls = protocol_data.get('currentChainTvls', {})
             eth_tvl = chain_tvls.get('Ethereum', 0)
             
-            # Estimate per-pool TVL (approximate distribution)
+            if eth_tvl == 0:
+                logger.warning(f"Uniswap V2 {pool_name}: Zero Ethereum TVL, using fallback")
+                return self._get_fallback_data(pool_name)
+            
+            # Pool weight estimates (approximate distribution)
             pool_weights = {
                 'USDC-ETH': 0.25,
                 'DAI-ETH': 0.15,
@@ -141,6 +145,8 @@ class UniswapV2Fetcher(ProtocolFetcher):
             
             pool_tvl = eth_tvl * pool_weights.get(pool_name, 0.1)
             volume_24h = pool_tvl * 0.08  # Approximate 8% daily volume
+            
+            logger.info(f"✓ Uniswap V2 {pool_name}: LIVE DATA - TVL ${pool_tvl:,.0f}")
             
             return {
                 'protocol': 'Uniswap V2',
@@ -158,7 +164,7 @@ class UniswapV2Fetcher(ProtocolFetcher):
                 'synthetic': False
             }
         except Exception as e:
-            print(f"UniswapV2 fetch error for {pool_name}: {e}")
+            logger.error(f"✗ UniswapV2 {pool_name}: Error - {e}, using fallback")
             return self._get_fallback_data(pool_name)
     
     def _get_fallback_data(self, pool_name: str) -> Dict:
