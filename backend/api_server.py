@@ -40,7 +40,7 @@ scheduler = None
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup"""
-    global model_server, signer, submitter
+    global model_server, signer, submitter, scheduler
     
     # Initialize database
     init_db()
@@ -66,6 +66,14 @@ async def startup_event():
         print(f"Chain submitter ready")
     except Exception as e:
         print(f"Warning: Chain submitter not ready: {e}")
+    
+    # Initialize and start scheduler
+    try:
+        scheduler = RiskScheduler()
+        scheduler.start()
+        print(f"Scheduler started - Auto-fetching every 5 minutes")
+    except Exception as e:
+        print(f"Warning: Scheduler not started: {e}")
 
 # Request/Response models
 class InferRequest(BaseModel):
