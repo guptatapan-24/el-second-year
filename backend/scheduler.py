@@ -4,6 +4,7 @@
 import time
 import asyncio
 import requests
+import logging
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from data_fetcher import DataFetcher
@@ -12,6 +13,13 @@ from signer import PayloadSigner
 from submit_to_chain import ChainSubmitter
 from database import SessionLocal, Snapshot
 from config import config
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class RiskScheduler:
     def __init__(self):
