@@ -247,7 +247,7 @@ class UniswapV3Fetcher(ProtocolFetcher):
                 'synthetic': False
             }
         except Exception as e:
-            print(f"UniswapV3 fetch error for {pool_name}: {e}")
+            logger.error(f"✗ UniswapV3 {pool_name}: Error - {e}, using fallback")
             return self._get_fallback_data(pool_name)
     
     def _get_fallback_data(self, pool_name: str) -> Dict:
@@ -338,7 +338,7 @@ class AaveFetcher(ProtocolFetcher):
                 'synthetic': False
             }
         except Exception as e:
-            print(f"Aave fetch error for {asset}: {e}")
+            logger.error(f"✗ Aave {asset}: Error - {e}, using fallback")
             return self._get_fallback_data(asset)
     
     def _get_fallback_data(self, asset: str) -> Dict:
@@ -430,7 +430,7 @@ class CompoundFetcher(ProtocolFetcher):
                 'synthetic': False
             }
         except Exception as e:
-            print(f"Compound fetch error for {asset}: {e}")
+            logger.error(f"✗ Compound {asset}: Error - {e}, using fallback")
             return self._get_fallback_data(asset)
     
     def _get_fallback_data(self, asset: str) -> Dict:
@@ -505,7 +505,7 @@ class CurveFetcher(ProtocolFetcher):
                 'synthetic': False
             }
         except Exception as e:
-            print(f"Curve fetch error for {pool_name}: {e}")
+            logger.error(f"✗ Curve {pool_name}: Error - {e}, using fallback")
             return self._get_fallback_data(pool_name)
     
     def _get_fallback_data(self, pool_name: str) -> Dict:
