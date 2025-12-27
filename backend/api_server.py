@@ -13,6 +13,7 @@ from signer import PayloadSigner
 from submit_to_chain import ChainSubmitter
 from database import get_db, init_db, Snapshot, RiskSubmission
 from config import config
+from scheduler import RiskScheduler
 
 # Initialize FastAPI
 app = FastAPI(
