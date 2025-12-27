@@ -32,12 +32,12 @@ class RiskScheduler:
     def fetch_all_protocols_data(self):
         """Fetch fresh data from all protocols"""
         try:
-            print(f"\n[{datetime.utcnow()}] Fetching protocol data...")
+            logger.info(f"\n🔄 Fetching protocol data...")
             snapshot_ids = self.data_fetcher.fetch_all_protocols()
-            print(f"✓ Fetched data for {len(snapshot_ids)} protocols")
+            logger.info(f"✅ Fetched data for {len(snapshot_ids)} protocols")
             return snapshot_ids
         except Exception as e:
-            print(f"✗ Error fetching protocols: {e}")
+            logger.error(f"❌ Error fetching protocols: {e}")
             return []
     
     def compute_and_submit_risks(self):
