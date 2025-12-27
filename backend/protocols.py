@@ -6,6 +6,15 @@ from typing import Dict, List, Optional
 from web3 import Web3
 from datetime import datetime
 import json
+import logging
+import time
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class ProtocolFetcher:
     """Base class for protocol-specific data fetchers"""
