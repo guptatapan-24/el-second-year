@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Background scheduler for periodic data fetching and risk updates"""
+"""Background scheduler for periodic data fetching and risk updates
+
+Extended for Phase 1 with:
+- Hourly snapshot collection for time-series analysis
+- Historical data seeding support
+- Feature computation integration
+"""
 
 import time
 import logging
@@ -13,6 +19,10 @@ from signer import PayloadSigner
 from submit_to_chain import ChainSubmitter
 from database import SessionLocal, Snapshot
 from config import config
+
+# Phase 1: Time-series imports
+from jobs.hourly_snapshot import HourlySnapshotCollector
+from features.basic_timeseries import TimeSeriesFeatureEngine
 
 # ------------------------------------------------------------------
 # Logging
