@@ -64,6 +64,11 @@ class RiskScheduler:
 
         self.fetch_lock = Lock()
         self.scheduler = BackgroundScheduler()
+        
+        # Phase 1: Time-series components
+        self.hourly_collector = HourlySnapshotCollector()
+        self.feature_engine = TimeSeriesFeatureEngine()
+        self._history_seeded = False
 
     # -----------------------------
     # SAFE FETCH (LOCKED)
