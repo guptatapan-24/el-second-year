@@ -14,14 +14,14 @@ Academic Keywords:
 """
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, UniqueConstraint, Index
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timedelta
 import logging
-
-# Import base from main database module
 import sys
 import os
+
+# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from database import Base, engine
 
 logger = logging.getLogger(__name__)

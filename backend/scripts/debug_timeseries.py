@@ -38,14 +38,8 @@ sys.path.insert(0, backend_dir)
 from tabulate import tabulate
 from sqlalchemy import and_, desc, func
 
-# Now import from the main database.py file (not the database directory)
-import importlib.util
-spec = importlib.util.spec_from_file_location("database_module", os.path.join(backend_dir, "database.py"))
-database_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(database_module)
-SessionLocal = database_module.SessionLocal
-
-from database.snapshot_history import SnapshotHistory, init_snapshot_history_db
+from database import SessionLocal
+from db_models.snapshot_history import SnapshotHistory, init_snapshot_history_db
 from features.basic_timeseries import TimeSeriesFeatureEngine, TimeSeriesFeatures
 from jobs.hourly_snapshot import HourlySnapshotCollector
 

@@ -23,17 +23,17 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import List, Dict, Optional
 import random
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import SessionLocal
-from database.snapshot_history import SnapshotHistory, init_snapshot_history_db
+from db_models.snapshot_history import SnapshotHistory, init_snapshot_history_db
 from protocols import MultiProtocolFetcher
 from config import config
 

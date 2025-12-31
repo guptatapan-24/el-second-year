@@ -24,15 +24,16 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import and_, desc
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from database import SessionLocal
-from database.snapshot_history import SnapshotHistory
+from db_models.snapshot_history import SnapshotHistory
 
 logger = logging.getLogger(__name__)
 
