@@ -125,6 +125,81 @@ class RiskScheduler:
             db.close()
 
     # -----------------------------
+    # PHASE 1: HOURLY SNAPSHOT COLLECTION
+    # -----------------------------
+    def collect_hourly_snapshots(self):
+        """
+        Hourly time-series data collection job.
+        
+        Collects snapshots for all protocols and stores in snapshot_history
+        table for rolling window feature computation.
+        """
+        logger.info("=" * 60)
+        logger.info(f"🕐 HOURLY SNAPSHOT COLLECTION @ {datetime.utcnow()}")
+        logger.info("=" * 60)
+        
+        try:
+            pools = self.hourly_collector.collect_hourly_snapshot()
+            logger.info(f"✅ Collected {len(pools)} hourly snapshots")
+            return pools
+        except Exception as e:
+            logger.error(f"❌ Hourly collection failed: {e}")
+            return []
+    
+    def seed_historical_data(self, hours: int = 48):
+        """
+        Seed historical data for immediate feature computation.
+        
+        Call this once on startup to enable time-series features
+        without waiting for real data accumulation.
+        """
+        if self._history_seeded:
+            logger.info("📊 Historical data already seeded, skipping")
+            return 0
+        
+        logger.info(f"🌱 Seeding {hours} hours of historical data...")
+        try:
+            records = self.hourly_collector.seed_historical_data(hours=hours)
+            self._history_seeded = True
+            logger.info(f"✅ Seeded {records} historical records")
+            return records
+        except Exception as e:
+            logger.error(f"❌ Seeding failed: {e}")
+            return 0
+    
+    def compute_timeseries_features(self):
+        """
+        Compute time-series features for all pools.
+        
+        This runs after hourly collection to update derived features.
+        """
+        logger.info("📊 Computing time-series features...")
+        
+        try:
+            pool_ids = self.feature_engine.get_all_pool_ids()
+            features_batch = self.feature_engine.compute_features_batch(pool_ids)
+            
+            # Log summary
+            risk_signals_count = 0
+            for pool_id, features in features_batch.items():
+                signals = features.get_risk_signals()
+                if signals:
+                    risk_signals_count += len(signals)
+                    for sig in signals:
+                        logger.warning(
+                            f"🚨 {pool_id}: [{sig['severity'].upper()}] {sig['description']}"
+                        )
+            
+            logger.info(f"✅ Computed features for {len(pool_ids)} pools")
+            if risk_signals_count > 0:
+                logger.warning(f"⚠️ {risk_signals_count} risk signals detected")
+            
+            return features_batch
+        except Exception as e:
+            logger.error(f"❌ Feature computation failed: {e}")
+            return {}
+
+    # -----------------------------
     # FULL CYCLE
     # -----------------------------
     def full_update_cycle(self):
