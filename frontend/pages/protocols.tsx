@@ -35,8 +35,10 @@ export default function Protocols() {
   const fetchProtocols = async () => {
     try {
       const [protocolsRes, risksRes] = await Promise.all([
-        axios.get(`${API_URL}/protocols`),
-        axios.get(`${API_URL}/submissions`)
+        axios.get(`${API_URL}/api/protocols`),
+        axios.get(`${API_URL}/api/submissions`)
+// axios.post(`${API_URL}/api/fetch_protocols`)
+
       ]);
       
       setProtocols(protocolsRes.data);
@@ -59,7 +61,8 @@ export default function Protocols() {
   const handleFetchProtocols = async () => {
     setIsFetching(true);
     try {
-      await axios.post(`${API_URL}/fetch_protocols`);
+      await axios.post(`${API_URL}/api/protocols/fetch`);
+
       await fetchProtocols();
     } catch (error) {
       console.error('Error fetching protocols:', error);
@@ -68,35 +71,15 @@ export default function Protocols() {
     }
   };
 
-  // Initial fetch and auto-refresh
-  useEffect(() => {
-    const initialFetch = async () => {
-      await fetchProtocols();
-      // If no protocols found, trigger a fetch from live sources
-      if (protocols.length === 0) {
-        await handleFetchProtocols();
-      }
-    };
-    
-    initialFetch();
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchProtocols, 15000); // 15 seconds for more responsive updates
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh]);
-  
-  // Auto-fetch live data every 5 minutes
-  useEffect(() => {
-    const liveDataInterval = setInterval(async () => {
-      if (!isFetching) {
-        console.log('[Auto-fetch] Fetching live protocol data...');
-        await handleFetchProtocols();
-      }
-    }, 300000); // 5 minutes
-    
-    return () => clearInterval(liveDataInterval);
-  }, [isFetching]);
+  // Initial fetch + auto-refresh (SAFE)
+useEffect(() => {
+  fetchProtocols();
+
+  if (autoRefresh) {
+    const interval = setInterval(fetchProtocols, 30000); // just READ data
+    return () => clearInterval(interval);
+  }
+}, [autoRefresh]);
 
   // Filter protocols
   const filteredProtocols = protocols.filter(p => {
@@ -210,7 +193,7 @@ export default function Protocols() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProtocols.map((protocol) => (
                   <ProtocolCard
-                    key={protocol.pool_id}
+                    key={`${protocol.pool_id}-${protocol.last_update}`}
                     pool_id={protocol.pool_id}
                     protocol={protocol.protocol}
                     category={protocol.category}

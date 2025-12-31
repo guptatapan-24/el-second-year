@@ -33,7 +33,7 @@ export default function PoolDetail() {
 
   const fetchPoolData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/submissions`, {
+      const response = await axios.get(`${API_URL}/api/submissions`, {
         params: { pool_id: id }
       });
       

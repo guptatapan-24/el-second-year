@@ -20,7 +20,7 @@ export default function Home() {
 
   const fetchPools = async () => {
     try {
-      const response = await axios.get(`${API_URL}/submissions`);
+      const response = await axios.get(`${API_URL}/api/submissions`);
       
       // Group by pool_id and get latest for each
       const poolMap = new Map<string, PoolRisk>();

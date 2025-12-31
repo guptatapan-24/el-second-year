@@ -37,33 +37,42 @@ class ModelServer:
             print("Run model_trainer.py first to train the model")
     
     def get_latest_snapshot(self, pool_id: str) -> Dict:
-        """Get latest snapshot for a pool"""
         db = SessionLocal()
         try:
-            snapshot = db.query(Snapshot).filter(
-                Snapshot.pool_id == pool_id
-            ).order_by(Snapshot.timestamp.desc()).first()
-            
-            if not snapshot:
-                raise ValueError(f"No snapshot found for pool {pool_id}")
-            
-            # Prepare feature dict
-            features = {
-                'tvl': snapshot.tvl or 0,
-                'reserve0': snapshot.reserve0 or 0,
-                'reserve1': snapshot.reserve1 or 0,
-                'volume_24h': snapshot.volume_24h or 0,
+            snap = (
+                db.query(Snapshot)
+                .filter(Snapshot.pool_id == pool_id)
+                .order_by(Snapshot.timestamp.desc())
+                .first()
+            )
+            if not snap:
+                raise ValueError(f"No snapshot for {pool_id}")
+
+            tvl = float(snap.tvl or 0)
+            r0 = float(snap.reserve0 or 0)
+            r1 = float(snap.reserve1 or 0)
+            vol = float(snap.volume_24h or 0)
+            f = snap.features or {}
+
+            return {
+                "tvl": tvl,
+                "reserve0": r0,
+                "reserve1": r1,
+                "volume_24h": vol,
+                "tvl_pct_change_1h": float(f.get("tvl_pct_change_1h", 0)),
+                "reserve_imbalance": float(
+                    f.get("reserve_imbalance", abs(r0 - r1) / max(r0 + r1, 1))
+                ),
+                "volume_tvl_ratio": float(
+                    f.get("volume_tvl_ratio", vol / max(tvl, 1))
+                ),
+                "volatility_24h": float(f.get("volatility_24h", 0.02)),
+                "leverage_ratio": float(f.get("leverage_ratio", 1.0)),
             }
-            
-            # Add derived features from JSON
-            if snapshot.features:
-                for key in ['tvl_pct_change_1h', 'reserve_imbalance',
-                           'volume_tvl_ratio', 'volatility_24h', 'leverage_ratio']:
-                    features[key] = snapshot.features.get(key, 0)
-            
-            return features
         finally:
             db.close()
+
+
     
     def compute_shap_explanations(self, features: np.ndarray) -> List[Dict]:
         """Compute SHAP values and return top contributing features"""
@@ -97,41 +106,28 @@ class ModelServer:
         return feature_impacts[:3]
     
     def predict_risk(self, pool_id: str) -> Dict:
-        """Predict risk score for a pool with explanations"""
-        if self.model is None:
-            raise RuntimeError("Model not loaded")
-        
-        # Get latest snapshot
-        features_dict = self.get_latest_snapshot(pool_id)
-        
-        # Prepare features array
-        X = np.array([[features_dict.get(f, 0) for f in self.feature_names]])
-        
-        # Predict probability
-        risk_proba = self.model.predict_proba(X)[0][1]  # Probability of risk
-        risk_score = float(risk_proba * 100)  # Scale to 0-100
-        
-        # Get SHAP explanations
+        features = self.get_latest_snapshot(pool_id)
+        X = np.array([[features[f] for f in self.feature_names]])
+
+        # ✅ USE PROBABILITY
+        prob = float(self.model.predict_proba(X)[0][1])
+        risk_score = round(prob * 100, 2)
+
         top_reasons = self.compute_shap_explanations(X)
-        
-        # Prepare result
-        result = {
-            'pool_id': pool_id,
-            'risk_score': round(risk_score, 2),
-            'risk_level': self.get_risk_level(risk_score),
-            'top_reasons': [
-                {
-                    'feature': r['feature'],
-                    'impact': round(r['impact'], 3)
-                }
+
+        return {
+            "pool_id": pool_id,
+            "risk_score": risk_score,
+            "risk_level": self.get_risk_level(risk_score),
+            "top_reasons": [
+                {"feature": r["feature"], "impact": round(r["impact"], 4)}
                 for r in top_reasons
             ],
-            'model_version': 'xgb_v1',
-            'timestamp': datetime.utcnow().isoformat(),
-            'features': features_dict
+            "model_version": "xgb_v1",
+            "timestamp": datetime.utcnow().isoformat(),
+            "features": features,
         }
-        
-        return result
+
     
     def get_risk_level(self, score: float) -> str:
         """Categorize risk score"""

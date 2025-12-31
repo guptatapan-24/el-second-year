@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 from datetime import datetime
+from routers import protocols_router, submissions_router
 
 from model_server import ModelServer
 from signer import PayloadSigner
@@ -14,13 +15,16 @@ from submit_to_chain import ChainSubmitter
 from database import get_db, init_db, Snapshot, RiskSubmission
 from config import config
 from scheduler import RiskScheduler
-
+scheduler_started = False
 # Initialize FastAPI
 app = FastAPI(
     title="VeriRisk API",
     description="Verifiable AI Risk Oracle for DeFi",
-    version="1.0.0"
+    version="1.0.0",
+    # root_path=\"/api\"  # ADD THIS
 )
+app.include_router(protocols_router, prefix="/api")
+app.include_router(submissions_router, prefix="/api")
 
 # CORS
 app.add_middleware(
@@ -39,8 +43,11 @@ scheduler = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize on startup"""
-    global model_server, signer, submitter, scheduler
+    global model_server, signer, submitter, scheduler, scheduler_started
+
+    if scheduler_started:
+        return
+    scheduler_started = True
     
     # Initialize database
     init_db()
@@ -70,7 +77,10 @@ async def startup_event():
     # Initialize and start scheduler
     try:
         scheduler = RiskScheduler()
+        from scheduler import set_global_scheduler
+        set_global_scheduler(scheduler)
         scheduler.start()
+
         print(f"Scheduler started - Auto-fetching every 5 minutes")
     except Exception as e:
         print(f"Warning: Scheduler not started: {e}")
@@ -226,30 +236,7 @@ async def push_to_chain(request: InferRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/submissions")
-async def get_submissions(pool_id: Optional[str] = None):
-    """Get risk submission history"""
-    db = next(get_db())
-    try:
-        query = db.query(RiskSubmission)
-        if pool_id:
-            query = query.filter(RiskSubmission.pool_id == pool_id)
-        
-        submissions = query.order_by(RiskSubmission.timestamp.desc()).limit(50).all()
-        
-        return [
-            {
-                "pool_id": s.pool_id,
-                "risk_score": s.risk_score,
-                "timestamp": s.timestamp.isoformat(),
-                "tx_hash": s.tx_hash,
-                "status": s.status,
-                "top_reasons": s.top_reasons
-            }
-            for s in submissions
-        ]
-    finally:
-        db.close()
+
 
 @app.get("/snapshots")
 async def get_snapshots(pool_id: Optional[str] = None, limit: int = 50):
@@ -277,89 +264,5 @@ async def get_snapshots(pool_id: Optional[str] = None, limit: int = 50):
     finally:
         db.close()
 
-@app.get("/protocols")
-async def get_protocols():
-    """Get list of all monitored protocols"""
-    db = next(get_db())
-    try:
-        # Get unique pool_ids with their latest data
-        from sqlalchemy import func
-        
-        subquery = db.query(
-            Snapshot.pool_id,
-            func.max(Snapshot.timestamp).label('latest_timestamp')
-        ).group_by(Snapshot.pool_id).subquery()
-        
-        snapshots = db.query(Snapshot).join(
-            subquery,
-            (Snapshot.pool_id == subquery.c.pool_id) & 
-            (Snapshot.timestamp == subquery.c.latest_timestamp)
-        ).all()
-        
-        protocols = []
-        for s in snapshots:
-            # Determine protocol type and display name
-            pool_id = s.pool_id
-            if 'uniswap_v2' in pool_id:
-                protocol_type = 'Uniswap V2'
-                category = 'DEX'
-            elif 'uniswap_v3' in pool_id:
-                protocol_type = 'Uniswap V3'
-                category = 'DEX'
-            elif 'aave' in pool_id:
-                protocol_type = 'Aave V3'
-                category = 'Lending'
-            elif 'compound' in pool_id:
-                protocol_type = 'Compound V2'
-                category = 'Lending'
-            elif 'curve' in pool_id:
-                protocol_type = 'Curve'
-                category = 'DEX'
-            else:
-                protocol_type = s.source or 'Unknown'
-                category = 'Other'
-            
-            # Extract asset name from pool_id for better display
-            asset_name = pool_id.split('_')[-1].upper() if '_' in pool_id else pool_id
-            if 'uniswap' in pool_id:
-                # For uniswap pools, construct pair name
-                parts = pool_id.replace('uniswap_v2_', '').replace('uniswap_v3_', '').split('_')
-                asset_name = '-'.join([p.upper() for p in parts])
-            
-            # Check if data is from live source
-            features = s.features if isinstance(s.features, dict) else {}
-            is_synthetic = features.get('synthetic', s.source == 'synthetic')
-            
-            protocols.append({
-                'pool_id': pool_id,
-                'protocol': protocol_type,
-                'category': category,
-                'asset': asset_name,
-                'tvl': s.tvl,
-                'volume_24h': s.volume_24h,
-                'last_update': s.timestamp.isoformat(),
-                'data_source': 'live' if not is_synthetic else 'synthetic'
-            })
-        
-        return protocols
-    finally:
-        db.close()
 
-@app.post("/fetch_protocols")
-async def fetch_protocols():
-    """Trigger fetch for all protocols"""
-    from data_fetcher import DataFetcher
-    try:
-        fetcher = DataFetcher()
-        snapshot_ids = fetcher.fetch_all_protocols()
-        return {
-            "success": True,
-            "message": f"Fetched data for {len(snapshot_ids)} protocols",
-            "snapshot_ids": snapshot_ids
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)

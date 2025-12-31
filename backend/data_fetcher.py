@@ -84,36 +84,20 @@ class DataFetcher:
             print(f"On-chain fetch error: {e}")
             return {}
     
-    def compute_derived_features(self, raw_data: Dict) -> Dict:
-        """Compute derived risk features from raw data"""
-        features = {}
-        
-        # TVL change percentage
-        if 'tvl' in raw_data and 'tvl_prev' in raw_data:
-            features['tvl_pct_change_1h'] = (
-                (raw_data['tvl'] - raw_data['tvl_prev']) / raw_data['tvl_prev'] * 100
-                if raw_data['tvl_prev'] > 0 else 0
-            )
-        
-        # Reserve imbalance
-        if 'reserve0' in raw_data and 'reserve1' in raw_data:
-            total = raw_data['reserve0'] + raw_data['reserve1']
-            features['reserve_imbalance'] = (
-                abs(raw_data['reserve0'] - raw_data['reserve1']) / total
-                if total > 0 else 0
-            )
-        
-        # Volatility proxy from 24h change
-        if 'volume_24h' in raw_data and 'tvl' in raw_data:
-            features['volume_tvl_ratio'] = (
-                raw_data['volume_24h'] / raw_data['tvl']
-                if raw_data['tvl'] > 0 else 0
-            )
-        
-        # Add more features as needed
-        features['timestamp'] = datetime.utcnow().isoformat()
-        
-        return features
+    def compute_derived_features(self, raw: dict) -> dict:
+        tvl = float(raw.get("tvl", 0))
+        r0 = float(raw.get("reserve0", 0))
+        r1 = float(raw.get("reserve1", 0))
+        vol = float(raw.get("volume_24h", 0))
+
+        return {
+            "tvl_pct_change_1h": 0.0,
+            "reserve_imbalance": abs(r0 - r1) / max(r0 + r1, 1),
+            "volume_tvl_ratio": vol / max(tvl, 1),
+            "volatility_24h": 0.02,
+            "leverage_ratio": 1.0,
+        }
+
     
     def fetch_and_store(self, pool_id: str, pool_address: str) -> Optional[str]:
         """Fetch data for a pool and store in database"""
@@ -211,35 +195,41 @@ class DataFetcher:
         finally:
             db.close()
     
-    def generate_synthetic_data(self, pool_id: str, num_samples: int = 100):
-        """Generate synthetic DeFi data for testing"""
-        import numpy as np
-        
+    def generate_synthetic_data(self, pool_id: str, num_samples: int = 300):
+        import random
+        from datetime import timedelta
+
         db = SessionLocal()
         try:
             base_time = datetime.utcnow() - timedelta(days=30)
-            
+
             for i in range(num_samples):
-                # Simulate realistic DeFi metrics with some risk events
-                timestamp = base_time + timedelta(hours=i*6)
-                
-                # TVL with occasional drops (risk events)
-                tvl = 1_000_000 + random.gauss(0, 100_000)
-                if random.random() < 0.05:  # 5% chance of drop
-                    tvl *= 0.7  # 30% drop
-                
-                reserve0 = tvl / 2 * (1 + random.gauss(0, 0.1))
-                reserve1 = tvl / 2 * (1 + random.gauss(0, 0.1))
-                volume_24h = tvl * random.uniform(0.1, 0.5)
-                
+                timestamp = base_time + timedelta(hours=i)
+
+                # ---- FORCE RISK EVENTS ----
+                if random.random() < 0.3:  # 30% risky
+                    tvl = random.uniform(200_000, 500_000)
+                    tvl_pct_change = random.uniform(-50, -25)
+                    volatility = random.uniform(0.12, 0.25)
+                    leverage = random.uniform(2.5, 4.0)
+                else:  # normal
+                    tvl = random.uniform(800_000, 1_200_000)
+                    tvl_pct_change = random.uniform(-5, 5)
+                    volatility = random.uniform(0.02, 0.05)
+                    leverage = random.uniform(1.0, 1.5)
+
+                reserve0 = tvl * random.uniform(0.4, 0.6)
+                reserve1 = tvl - reserve0
+                volume_24h = tvl * random.uniform(0.2, 0.6)
+
                 features = {
-                    'tvl_pct_change_1h': random.gauss(0, 5),
-                    'reserve_imbalance': abs(reserve0 - reserve1) / (reserve0 + reserve1),
-                    'volume_tvl_ratio': volume_24h / tvl,
-                    'volatility_24h': random.uniform(0.02, 0.15),
-                    'leverage_ratio': random.uniform(1.0, 3.0),
+                    "tvl_pct_change_1h": tvl_pct_change,
+                    "reserve_imbalance": abs(reserve0 - reserve1) / tvl,
+                    "volume_tvl_ratio": volume_24h / tvl,
+                    "volatility_24h": volatility,
+                    "leverage_ratio": leverage,
                 }
-                
+
                 snapshot = Snapshot(
                     snapshot_id=f"synthetic-{pool_id}-{i}",
                     pool_id=pool_id,
@@ -250,14 +240,15 @@ class DataFetcher:
                     volume_24h=volume_24h,
                     oracle_price=1.0,
                     features=features,
-                    source='synthetic'
+                    source="synthetic",
                 )
                 db.add(snapshot)
-            
+
             db.commit()
-            print(f"Generated {num_samples} synthetic snapshots for pool {pool_id}")
+            print(f"Generated {num_samples} synthetic snapshots for {pool_id}")
         finally:
             db.close()
+
 
 if __name__ == "__main__":
     import argparse

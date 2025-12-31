@@ -53,24 +53,32 @@ class ModelTrainer:
             db.close()
     
     def create_labels(self, df: pd.DataFrame) -> pd.Series:
-        """Create risk labels (1 = high risk, 0 = normal)"""
-        # Label as high risk if:
-        # - TVL dropped >20% or
-        # - Extreme reserve imbalance >0.3 or
-        # - Very high volatility >0.1
-        
-        df['tvl_pct_change_1h'] = df['tvl_pct_change_1h'].fillna(0)
-        df['reserve_imbalance'] = df['reserve_imbalance'].fillna(0)
-        df['volatility_24h'] = df['volatility_24h'].fillna(0)
-        
-        risk_labels = (
-            (df['tvl_pct_change_1h'] < -20) |
-            (df['reserve_imbalance'] > 0.3) |
-            (df['volatility_24h'] > 0.1)
-        ).astype(int)
-        
-        print(f"Risk distribution: {risk_labels.value_counts().to_dict()}")
-        return risk_labels
+        """
+        Binary risk labels:
+        1 = risky
+        0 = safe
+        """
+
+        df = df.copy()
+
+        # Ensure required columns exist
+        for col in ["tvl_pct_change_1h", "reserve_imbalance", "volatility_24h"]:
+            df[col] = df[col].fillna(0)
+
+        # Hard binary rules
+        risk = (
+            (df["tvl_pct_change_1h"] <= -20) |
+            (df["reserve_imbalance"] >= 0.30) |
+            (df["volatility_24h"] >= 0.10)
+        )
+
+        labels = risk.astype(int)
+
+        print("Label distribution:")
+        print(labels.value_counts())
+
+        return labels
+
     
     def train(self, df: pd.DataFrame, labels: pd.Series):
         """Train XGBoost model"""
@@ -78,37 +86,58 @@ class ModelTrainer:
         X = df[self.feature_names].fillna(0)
         y = labels
         
-        # Train-test split (time-series aware)
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, shuffle=False
-        )
+        split_idx = int(len(X) * 0.8)
+
+        X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+        y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+
+        # Fallback: if test set has only one class, reshuffle safely
+        if y_test.nunique() < 2:
+            print("⚠ Test set single-class, switching to stratified split")
+
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y,
+                test_size=0.2,
+                random_state=42,
+                stratify=y
+            )
+
         
         # Train XGBoost
         print("Training XGBoost model...")
         self.model = xgb.XGBClassifier(
-            n_estimators=200,
+            n_estimators=300,
             max_depth=6,
             learning_rate=0.05,
             subsample=0.8,
             colsample_bytree=0.8,
+            # objective="binary:logistic",   # 🔥 IMPORTANT
+            eval_metric="logloss",
             random_state=42,
-            eval_metric='auc'
         )
+
+
         
-        self.model.fit(
-            X_train, y_train,
-            eval_set=[(X_test, y_test)],
-            verbose=False
-        )
+        self.model.fit(X_train, y_train)
         
+        # Evaluate
         # Evaluate
         y_pred_proba = self.model.predict_proba(X_test)[:, 1]
         y_pred = self.model.predict(X_test)
-        
-        auc = roc_auc_score(y_test, y_pred_proba)
-        print(f"\nTest AUC: {auc:.4f}")
+
+        metrics = {}
+
+        if len(set(y_test)) > 1:
+            auc = roc_auc_score(y_test, y_pred_proba)
+            print(f"\nTest AUC: {auc:.4f}")
+            metrics['auc'] = float(auc)
+        else:
+            print("\n⚠ ROC AUC skipped: single-class test set (expected with time-based split)")
+            metrics['auc'] = None
+
         print("\nClassification Report:")
-        print(classification_report(y_test, y_pred))
+        print(classification_report(y_test, y_pred, zero_division=0))
+
         
         # Feature importance
         importance = pd.DataFrame({
@@ -118,12 +147,13 @@ class ModelTrainer:
         print("\nFeature Importance:")
         print(importance)
         
-        return {
-            'auc': float(auc),
-            'n_train': len(X_train),
-            'n_test': len(X_test),
-            'feature_importance': importance.to_dict('records')
-        }
+        metrics.update({
+        'n_train': len(X_train),
+        'n_test': len(X_test),
+        'feature_importance': importance.to_dict('records')
+        })
+        return metrics
+
     
     def save_model(self, metrics: dict, model_path: str = '../models/xgb_veririsk_v1.pkl'):
         """Save model and metadata"""
