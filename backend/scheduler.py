@@ -223,6 +223,7 @@ class RiskScheduler:
         logger.info(f"📜 Contract: {config.ORACLE_CONTRACT_ADDRESS}")
         logger.info(f"🔑 Signer: {self.signer.address}")
 
+        # Existing jobs
         self.scheduler.add_job(
             self.fetch_all_protocols_data,
             "interval",
@@ -246,9 +247,33 @@ class RiskScheduler:
             id="full_cycle",
             replace_existing=True,
         )
+        
+        # Phase 1: Hourly snapshot collection job
+        self.scheduler.add_job(
+            self.collect_hourly_snapshots,
+            "cron",
+            minute=0,  # Run at the start of every hour
+            id="hourly_snapshot_collector",
+            replace_existing=True,
+        )
+        
+        # Phase 1: Feature computation after hourly collection
+        self.scheduler.add_job(
+            self.compute_timeseries_features,
+            "cron",
+            minute=5,  # Run 5 minutes after hourly collection
+            id="timeseries_feature_computation",
+            replace_existing=True,
+        )
 
         self.scheduler.start()
         logger.info("✅ Scheduler started")
+        logger.info("   Jobs scheduled:")
+        logger.info("   - fetch_data: every 5 minutes")
+        logger.info("   - submit_risks: every 10 minutes")
+        logger.info("   - full_cycle: every 30 minutes")
+        logger.info("   - hourly_snapshot_collector: every hour (at :00)")
+        logger.info("   - timeseries_feature_computation: every hour (at :05)")
 
     def stop(self):
         self.scheduler.shutdown()
