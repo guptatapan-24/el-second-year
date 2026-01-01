@@ -210,15 +210,88 @@ class RiskScheduler:
             return {}
 
     # -----------------------------
-    # FULL CYCLE
+    # PHASE 3: RISK PREDICTION AND STORAGE
+    # -----------------------------
+    def predict_and_store_risks(self):
+        """
+        Phase 3: Predict risk for all pools and store in risk_history.
+        
+        This job runs every 10 minutes and:
+        1. Fetches current data for all pools
+        2. Runs model inference with SHAP explanations
+        3. Stores results in risk_history table
+        """
+        if not self.risk_lock.acquire(blocking=False):
+            logger.info("⏭️ Risk prediction already running, skipping")
+            return []
+        
+        try:
+            logger.info("=" * 60)
+            logger.info(f"📊 RISK PREDICTION CYCLE @ {datetime.utcnow()}")
+            logger.info("=" * 60)
+            
+            results = self.risk_evaluator.predict_all_pools()
+            
+            logger.info(f"✅ Stored {len(results)} risk predictions")
+            return results
+            
+        except Exception as e:
+            logger.error(f"❌ Risk prediction failed: {e}")
+            return []
+        finally:
+            self.risk_lock.release()
+    
+    # -----------------------------
+    # PHASE 3: ALERT EVALUATION
+    # -----------------------------
+    def evaluate_alerts(self):
+        """
+        Phase 3: Evaluate alert conditions for all pools.
+        
+        This job runs every 10 minutes and:
+        1. Compares current risk with thresholds
+        2. Detects risk level escalations
+        3. Generates alerts with SHAP explanations
+        """
+        try:
+            logger.info("=" * 60)
+            logger.info(f"🔔 ALERT EVALUATION @ {datetime.utcnow()}")
+            logger.info("=" * 60)
+            
+            alerts = self.risk_evaluator.evaluate_all_alerts()
+            
+            if alerts:
+                logger.warning(f"🚨 Generated {len(alerts)} new alerts")
+            else:
+                logger.info("✅ No new alerts")
+            
+            return alerts
+            
+        except Exception as e:
+            logger.error(f"❌ Alert evaluation failed: {e}")
+            return []
+
+    # -----------------------------
+    # FULL CYCLE (Updated for Phase 3)
     # -----------------------------
     def full_update_cycle(self):
         logger.info("=" * 60)
         logger.info(f"🚀 Full cycle start @ {datetime.utcnow()}")
         logger.info("=" * 60)
 
+        # Step 1: Fetch latest data
         self.fetch_all_protocols_data()
         time.sleep(3)
+        
+        # Step 2: Predict and store risks (Phase 3)
+        self.predict_and_store_risks()
+        time.sleep(2)
+        
+        # Step 3: Evaluate alerts (Phase 3)
+        self.evaluate_alerts()
+        time.sleep(2)
+        
+        # Step 4: Submit high-risk to chain (original)
         self.compute_and_submit_risks()
 
         logger.info("=" * 60)
@@ -229,27 +302,47 @@ class RiskScheduler:
     # START (NO IMMEDIATE RUN)
     # -----------------------------
     def start(self):
-        logger.info("🚀 VeriRisk Scheduler starting")
+        logger.info("🚀 VeriRisk Scheduler starting (Phase 3)")
         logger.info(f"📜 Contract: {config.ORACLE_CONTRACT_ADDRESS}")
         logger.info(f"🔑 Signer: {self.signer.address}")
 
-        # Existing jobs
+        # Data fetching job
         self.scheduler.add_job(
             self.fetch_all_protocols_data,
             "interval",
-            minutes=5,
+            minutes=10,
             id="fetch_data",
             replace_existing=True,
         )
 
+        # Phase 3: Risk prediction job
+        self.scheduler.add_job(
+            self.predict_and_store_risks,
+            "interval",
+            minutes=10,
+            id="predict_risks",
+            replace_existing=True,
+        )
+        
+        # Phase 3: Alert evaluation job
+        self.scheduler.add_job(
+            self.evaluate_alerts,
+            "interval",
+            minutes=10,
+            id="evaluate_alerts",
+            replace_existing=True,
+        )
+
+        # Chain submission job (only for high risk)
         self.scheduler.add_job(
             self.compute_and_submit_risks,
             "interval",
-            minutes=10,
+            minutes=15,
             id="submit_risks",
             replace_existing=True,
         )
 
+        # Full cycle job
         self.scheduler.add_job(
             self.full_update_cycle,
             "interval",
@@ -279,8 +372,10 @@ class RiskScheduler:
         self.scheduler.start()
         logger.info("✅ Scheduler started")
         logger.info("   Jobs scheduled:")
-        logger.info("   - fetch_data: every 5 minutes")
-        logger.info("   - submit_risks: every 10 minutes")
+        logger.info("   - fetch_data: every 10 minutes")
+        logger.info("   - predict_risks: every 10 minutes (Phase 3)")
+        logger.info("   - evaluate_alerts: every 10 minutes (Phase 3)")
+        logger.info("   - submit_risks: every 15 minutes")
         logger.info("   - full_cycle: every 30 minutes")
         logger.info("   - hourly_snapshot_collector: every hour (at :00)")
         logger.info("   - timeseries_feature_computation: every hour (at :05)")
