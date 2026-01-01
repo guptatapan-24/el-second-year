@@ -288,12 +288,13 @@ class DataFetcher:
                         
                 elif regime == 'pre_crash':
                     # Gradual decline with increasing volatility
-                    decline_rate = 0.008 + 0.005 * (1 - regime_duration / 24)  # Accelerating decline
+                    decline_rate = 0.008 + 0.005 * (1 - min(regime_duration, 24) / 24)  # Accelerating decline
                     noise = np.random.normal(0, 0.02)
                     current_tvl *= (1 - decline_rate + noise)
                     
                     regime_duration -= 1
-                    if regime_duration <= 0:
+                    # Only transition to crash if not in forced protection period
+                    if regime_duration <= 0 and (forced_crash_end_protection is None or i < forced_crash_end_protection):
                         regime = 'crash'
                         regime_duration = random.randint(6, 18)  # Crash duration
                         crash_counter += 1
