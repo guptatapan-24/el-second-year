@@ -334,17 +334,40 @@ class PredictiveModelTrainer:
         print(f"   Recall:    {metrics['recall']:.4f}")
         print(f"   F1-Score:  {metrics['f1_score']:.4f}")
         
+        # Handle classification report for single-class test set
+        unique_classes = set(y_true)
         print("\n   Classification Report:")
-        print(classification_report(y_true, y_pred, 
-                                    target_names=['No Crash', 'Crash'],
-                                    zero_division=0))
+        if len(unique_classes) == 1:
+            # Single class in test set - provide informative message
+            only_class = list(unique_classes)[0]
+            class_name = 'No Crash' if only_class == 0 else 'Crash'
+            print(f"   ⚠ Test set contains only '{class_name}' samples")
+            print(f"   Total samples: {len(y_true)}")
+            print(f"   Predictions: {sum(y_pred == 0)} No Crash, {sum(y_pred == 1)} Crash")
+        else:
+            # Both classes present - print full report
+            print(classification_report(y_true, y_pred, 
+                                        target_names=['No Crash', 'Crash'],
+                                        zero_division=0))
         
-        print("   Confusion Matrix:")
+        print("\n   Confusion Matrix:")
         cm = metrics['confusion_matrix']
         print("                 Predicted")
         print("                 No Crash  Crash")
-        print(f"   Actual No Crash  {cm[0][0]:5d}  {cm[0][1]:5d}")
-        print(f"   Actual Crash     {cm[1][0]:5d}  {cm[1][1]:5d}")
+        # Handle case where confusion matrix might be 1x1 or 1x2
+        if len(cm) == 1:
+            # Only one class in test set
+            if len(unique_classes) == 1 and 0 in unique_classes:
+                # Only "No Crash" class
+                print(f"   Actual No Crash  {cm[0][0] if len(cm[0]) > 0 else 0:5d}  {cm[0][1] if len(cm[0]) > 1 else 0:5d}")
+                print(f"   Actual Crash     {'N/A':>5s}  {'N/A':>5s}")
+            else:
+                # Only "Crash" class
+                print(f"   Actual No Crash  {'N/A':>5s}  {'N/A':>5s}")
+                print(f"   Actual Crash     {cm[0][0] if len(cm[0]) > 0 else 0:5d}  {cm[0][1] if len(cm[0]) > 1 else 0:5d}")
+        else:
+            print(f"   Actual No Crash  {cm[0][0]:5d}  {cm[0][1]:5d}")
+            print(f"   Actual Crash     {cm[1][0]:5d}  {cm[1][1]:5d}")
     
     def _print_feature_importance(self):
         """Print feature importance ranking."""
