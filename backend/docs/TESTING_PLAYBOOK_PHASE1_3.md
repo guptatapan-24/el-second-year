@@ -242,6 +242,8 @@ This uses current protocol TVLs and simulates hourly history around them.
 ```bash
 cd /app/backend
 
+# NOTE: this prints a lot; avoid piping to `head` because it can raise BrokenPipeError.
+
 # Build 30 days of simulated history (720 hours)
 python fetch_real_protocols.py --build-history --hours 720
 
