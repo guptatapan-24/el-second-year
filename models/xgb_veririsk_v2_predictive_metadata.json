@@ -6,29 +6,29 @@
   "prediction_target": "TVL crash >20% in next 24 hours",
   "prediction_horizon": "24 hours",
   "secondary_target": "TVL crash >10% in next 6 hours",
-  "sha256": "3bd284d5e83827926ed1d21535f39da74ddacf5970172d8fbad410159ff06a45",
+  "sha256": "336f279c83af1cbd1c37cac9aab2c163f773853ec42e78b18fe3d85cde751fe7",
   "ipfs_cid": "Qm...",
-  "train_date": "2026-01-01T10:09:56.753143",
+  "train_date": "2026-01-01T11:49:27.450729",
   "metrics": {
-    "roc_auc": 0.8167594606350588,
-    "precision": 0.8235294117647058,
-    "recall": 0.5157894736842106,
-    "f1_score": 0.6343042071197411,
+    "roc_auc": 0.7869706666666667,
+    "precision": 0.6666666666666666,
+    "recall": 0.6,
+    "f1_score": 0.631578947368421,
     "confusion_matrix": [
       [
-        1189,
-        21
+        1205,
+        45
       ],
       [
-        92,
-        98
+        60,
+        90
       ]
     ],
     "n_train": 5560,
     "n_test": 1400,
-    "train_crash_rate": 0.0539568345323741,
-    "test_crash_rate": 0.1357142857142857,
-    "scale_pos_weight": 17.533333333333335
+    "train_crash_rate": 0.06510791366906475,
+    "test_crash_rate": 0.10714285714285714,
+    "scale_pos_weight": 14.359116022099448
   },
   "feature_names": [
     "tvl_change_6h",
@@ -45,43 +45,43 @@
   "feature_importance": [
     {
       "feature": "reserve_imbalance",
-      "importance": 0.2607439458370209
+      "importance": 0.2881077527999878
     },
     {
       "feature": "early_warning_score",
-      "importance": 0.14872577786445618
-    },
-    {
-      "feature": "volume_spike_ratio",
-      "importance": 0.0851791501045227
-    },
-    {
-      "feature": "volatility_6h",
-      "importance": 0.08340582996606827
-    },
-    {
-      "feature": "tvl_change_6h",
-      "importance": 0.08153629302978516
+      "importance": 0.1368420124053955
     },
     {
       "feature": "volatility_24h",
-      "importance": 0.07379012554883957
+      "importance": 0.11644371598958969
     },
     {
       "feature": "tvl_change_24h",
-      "importance": 0.07352858781814575
+      "importance": 0.08839019387960434
+    },
+    {
+      "feature": "volume_spike_ratio",
+      "importance": 0.07909712195396423
+    },
+    {
+      "feature": "tvl_change_6h",
+      "importance": 0.07098699361085892
     },
     {
       "feature": "tvl_acceleration",
-      "importance": 0.06924933940172195
+      "importance": 0.060677096247673035
     },
     {
-      "feature": "volatility_ratio",
-      "importance": 0.06627769023180008
+      "feature": "volatility_6h",
+      "importance": 0.06064625456929207
     },
     {
       "feature": "reserve_imbalance_rate",
-      "importance": 0.05756331980228424
+      "importance": 0.05157158151268959
+    },
+    {
+      "feature": "volatility_ratio",
+      "importance": 0.04723721742630005
     }
   ],
   "hyperparameters": {
@@ -90,7 +90,7 @@
     "learning_rate": 0.05,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
-    "scale_pos_weight": 17.533333333333335
+    "scale_pos_weight": 14.359116022099448
   },
   "design_notes": {
     "label_type": "forward_looking",
