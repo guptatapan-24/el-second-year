@@ -576,23 +576,25 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python fetch_real_protocols.py --fetch           # Fetch current snapshot
-  python fetch_real_protocols.py --build-history   # Build 7 days of history
-  python fetch_real_protocols.py --predict         # Run predictions
-  python fetch_real_protocols.py --status          # Check database status
+  python fetch_real_protocols.py --fetch-history       # Fetch REAL 30-day history
+  python fetch_real_protocols.py --fetch-history --days 60  # Fetch 60 days
+  python fetch_real_protocols.py --predict             # Run predictions
+  python fetch_real_protocols.py --status              # Check database status
   
-For continuous monitoring:
-  # Add to crontab to run every hour:
-  # 0 * * * * cd /path/to/backend && python fetch_real_protocols.py --fetch
+This fetches REAL historical TVL data from DeFiLlama - not simulated!
         """
     )
     
     parser.add_argument('--fetch', action='store_true',
                         help='Fetch current data from real protocols')
+    parser.add_argument('--fetch-history', action='store_true',
+                        help='Fetch REAL historical data from DeFiLlama (recommended)')
     parser.add_argument('--build-history', action='store_true',
-                        help='Build simulated history from real TVL values')
+                        help='Build simulated history (fallback option)')
+    parser.add_argument('--days', type=int, default=30,
+                        help='Days of history to fetch (default: 30)')
     parser.add_argument('--hours', type=int, default=168,
-                        help='Hours of history to build (default: 168 = 7 days)')
+                        help='Hours of simulated history (default: 168)')
     parser.add_argument('--predict', action='store_true',
                         help='Run predictions on real protocol data')
     parser.add_argument('--status', action='store_true',
@@ -605,6 +607,8 @@ For continuous monitoring:
     
     if args.fetch:
         fetch_real_protocols_once()
+    elif args.fetch_history:
+        fetch_real_history(days=args.days)
     elif args.build_history:
         build_simulated_history(hours=args.hours)
     elif args.predict:
@@ -615,17 +619,20 @@ For continuous monitoring:
         # Default: show status and usage
         check_data_status()
         print("\n" + "="*70)
-        print("QUICK START GUIDE")
+        print("QUICK START GUIDE - REAL PROTOCOL TESTING")
         print("="*70)
         print("""
-1. Build history from real protocol TVL values:
-   python fetch_real_protocols.py --build-history --hours 720
+1. Fetch REAL historical TVL from DeFiLlama (30 days):
+   python fetch_real_protocols.py --fetch-history
 
-2. Train model on real data:
+2. Train model on REAL data:
    python model_trainer.py
 
 3. Run predictions on real protocols:
    python fetch_real_protocols.py --predict
+
+Note: DeFiLlama provides REAL historical data going back months/years.
+      No need to wait - fetch it instantly!
         """)
 
 
