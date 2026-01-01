@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Background scheduler for periodic data fetching and risk updates
 
-Extended for Phase 1 with:
+Extended for Phase 3 with:
+- Automated risk prediction pipeline
+- Alert evaluation and generation
+- Risk history tracking
 - Hourly snapshot collection for time-series analysis
 - Historical data seeding support
 - Feature computation integration
@@ -23,6 +26,9 @@ from config import config
 # Phase 1: Time-series imports
 from jobs.hourly_snapshot import HourlySnapshotCollector
 from features.basic_timeseries import TimeSeriesFeatureEngine
+
+# Phase 3: Risk evaluation imports
+from services.risk_evaluator import RiskEvaluator
 
 # ------------------------------------------------------------------
 # Logging
@@ -63,12 +69,16 @@ class RiskScheduler:
         self.submitter = ChainSubmitter()
 
         self.fetch_lock = Lock()
+        self.risk_lock = Lock()  # Phase 3: Lock for risk evaluation
         self.scheduler = BackgroundScheduler()
         
         # Phase 1: Time-series components
         self.hourly_collector = HourlySnapshotCollector()
         self.feature_engine = TimeSeriesFeatureEngine()
         self._history_seeded = False
+        
+        # Phase 3: Risk evaluation component
+        self.risk_evaluator = RiskEvaluator()
 
     # -----------------------------
     # SAFE FETCH (LOCKED)
