@@ -217,8 +217,6 @@ class DataFetcher:
             risk_profile: 'safe', 'risky', 'mixed', 'crash_prone'
             force_current_risk_state: If True, ensures pool ends in pre_crash/crash state
         """
-        import random
-        from datetime import timedelta
         import numpy as np
         
         db = SessionLocal()
