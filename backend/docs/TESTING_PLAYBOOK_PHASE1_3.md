@@ -216,6 +216,8 @@ This requires a trained model present (you can train on synthetic or on real).
 
 ```bash
 cd /app/backend
+
+# NOTE: This script prints a lot; avoid piping to `head` because it can raise BrokenPipeError.
 python fetch_real_protocols.py --predict
 ```
 
