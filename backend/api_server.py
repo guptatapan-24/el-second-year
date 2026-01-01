@@ -26,6 +26,7 @@ app = FastAPI(
 app.include_router(protocols_router, prefix="/api")
 app.include_router(submissions_router, prefix="/api")
 app.include_router(timeseries_router, prefix="/api")
+app.include_router(risk_router, prefix="/api")
 
 # CORS
 app.add_middleware(
