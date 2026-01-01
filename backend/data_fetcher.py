@@ -196,56 +196,163 @@ class DataFetcher:
             db.close()
     
     def generate_synthetic_data(self, pool_id: str, num_samples: int = 300):
+        """Legacy method - use generate_predictive_synthetic_data instead"""
+        return self.generate_predictive_synthetic_data(pool_id, num_samples)
+    
+    def generate_predictive_synthetic_data(self, pool_id: str, num_samples: int = 720, 
+                                            risk_profile: str = 'mixed'):
+        """
+        Generate synthetic time-series data with realistic crash patterns for predictive modeling.
+        
+        This method creates data with:
+        - Continuous time-series (hourly snapshots)
+        - Realistic crash scenarios (gradual decline, sudden crash, recovery patterns)
+        - Multiple risk regimes for diverse training data
+        
+        Args:
+            pool_id: Pool identifier
+            num_samples: Number of hourly snapshots (default 720 = 30 days)
+            risk_profile: 'safe', 'risky', 'mixed', 'crash_prone'
+        """
         import random
         from datetime import timedelta
-
+        import numpy as np
+        
         db = SessionLocal()
         try:
-            base_time = datetime.utcnow() - timedelta(days=30)
-
+            # Clear existing data for this pool
+            db.query(Snapshot).filter(Snapshot.pool_id == pool_id).delete()
+            db.commit()
+            
+            base_time = datetime.utcnow() - timedelta(hours=num_samples)
+            
+            # Initialize TVL trajectory
+            if risk_profile == 'safe':
+                base_tvl = 2_000_000
+                crash_probability = 0.05
+            elif risk_profile == 'risky':
+                base_tvl = 800_000
+                crash_probability = 0.25
+            elif risk_profile == 'crash_prone':
+                base_tvl = 500_000
+                crash_probability = 0.40
+            else:  # mixed
+                base_tvl = 1_000_000
+                crash_probability = 0.15
+            
+            current_tvl = base_tvl
+            regime = 'normal'  # normal, pre_crash, crash, recovery
+            regime_duration = 0
+            crash_counter = 0
+            
+            snapshots = []
+            
             for i in range(num_samples):
                 timestamp = base_time + timedelta(hours=i)
-
-                # ---- FORCE RISK EVENTS ----
-                if random.random() < 0.3:  # 30% risky
-                    tvl = random.uniform(200_000, 500_000)
-                    tvl_pct_change = random.uniform(-50, -25)
-                    volatility = random.uniform(0.12, 0.25)
-                    leverage = random.uniform(2.5, 4.0)
-                else:  # normal
-                    tvl = random.uniform(800_000, 1_200_000)
-                    tvl_pct_change = random.uniform(-5, 5)
-                    volatility = random.uniform(0.02, 0.05)
-                    leverage = random.uniform(1.0, 1.5)
-
-                reserve0 = tvl * random.uniform(0.4, 0.6)
-                reserve1 = tvl - reserve0
-                volume_24h = tvl * random.uniform(0.2, 0.6)
-
+                
+                # State machine for realistic price dynamics
+                if regime == 'normal':
+                    # Small random walk
+                    change = np.random.normal(0, 0.01)  # 1% std dev
+                    current_tvl *= (1 + change)
+                    
+                    # Check for crash trigger
+                    if random.random() < crash_probability / 100:  # Hourly probability
+                        regime = 'pre_crash'
+                        regime_duration = random.randint(6, 24)  # 6-24 hours warning
+                        
+                elif regime == 'pre_crash':
+                    # Gradual decline with increasing volatility
+                    decline_rate = 0.005 + 0.003 * (1 - regime_duration / 24)  # Accelerating
+                    noise = np.random.normal(0, 0.02)
+                    current_tvl *= (1 - decline_rate + noise)
+                    
+                    regime_duration -= 1
+                    if regime_duration <= 0:
+                        regime = 'crash'
+                        regime_duration = random.randint(3, 12)  # Crash duration
+                        crash_counter += 1
+                        
+                elif regime == 'crash':
+                    # Sharp decline
+                    crash_rate = random.uniform(0.03, 0.08)  # 3-8% per hour
+                    noise = np.random.normal(0, 0.01)
+                    current_tvl *= (1 - crash_rate + noise)
+                    
+                    regime_duration -= 1
+                    if regime_duration <= 0:
+                        regime = 'recovery'
+                        regime_duration = random.randint(24, 72)  # Recovery period
+                        
+                elif regime == 'recovery':
+                    # Slow recovery
+                    recovery_rate = random.uniform(0.002, 0.008)
+                    noise = np.random.normal(0, 0.01)
+                    current_tvl *= (1 + recovery_rate + noise)
+                    
+                    regime_duration -= 1
+                    if regime_duration <= 0:
+                        regime = 'normal'
+                
+                # Ensure TVL doesn't go negative or too low
+                current_tvl = max(current_tvl, base_tvl * 0.1)
+                # Cap TVL growth
+                current_tvl = min(current_tvl, base_tvl * 2.0)
+                
+                # Generate correlated features
+                if regime == 'crash':
+                    # High volume during crash (panic selling)
+                    volume_multiplier = random.uniform(2.0, 5.0)
+                    reserve_imbalance = random.uniform(0.15, 0.40)
+                elif regime == 'pre_crash':
+                    # Increasing volume before crash
+                    volume_multiplier = random.uniform(1.2, 2.5)
+                    reserve_imbalance = random.uniform(0.08, 0.20)
+                else:
+                    volume_multiplier = random.uniform(0.8, 1.5)
+                    reserve_imbalance = random.uniform(0.02, 0.10)
+                
+                # Generate reserves with imbalance
+                total_reserve = current_tvl
+                imbalance_direction = 1 if random.random() > 0.5 else -1
+                reserve0 = total_reserve * (0.5 + imbalance_direction * reserve_imbalance / 2)
+                reserve1 = total_reserve - reserve0
+                
+                # Volume correlated with TVL and regime
+                volume_24h = current_tvl * 0.3 * volume_multiplier
+                
                 features = {
-                    "tvl_pct_change_1h": tvl_pct_change,
-                    "reserve_imbalance": abs(reserve0 - reserve1) / tvl,
-                    "volume_tvl_ratio": volume_24h / tvl,
-                    "volatility_24h": volatility,
-                    "leverage_ratio": leverage,
+                    "tvl_pct_change_1h": 0.0,  # Will be computed by feature engine
+                    "reserve_imbalance": abs(reserve0 - reserve1) / max(total_reserve, 1),
+                    "volume_tvl_ratio": volume_24h / max(current_tvl, 1),
+                    "volatility_24h": 0.02 if regime == 'normal' else 0.08,
+                    "leverage_ratio": 1.0,
+                    "regime": regime,  # For debugging
                 }
-
+                
                 snapshot = Snapshot(
                     snapshot_id=f"synthetic-{pool_id}-{i}",
                     pool_id=pool_id,
                     timestamp=timestamp,
-                    tvl=tvl,
+                    tvl=current_tvl,
                     reserve0=reserve0,
                     reserve1=reserve1,
                     volume_24h=volume_24h,
                     oracle_price=1.0,
                     features=features,
-                    source="synthetic",
+                    source="synthetic_predictive",
                 )
-                db.add(snapshot)
-
+                snapshots.append(snapshot)
+            
+            # Bulk insert
+            db.bulk_save_objects(snapshots)
             db.commit()
-            print(f"Generated {num_samples} synthetic snapshots for {pool_id}")
+            
+            print(f"✓ Generated {num_samples} predictive synthetic snapshots for {pool_id}")
+            print(f"  Risk profile: {risk_profile}")
+            print(f"  Crash events: {crash_counter}")
+            print(f"  TVL range: ${min(s.tvl for s in snapshots):,.0f} - ${max(s.tvl for s in snapshots):,.0f}")
+            
         finally:
             db.close()
 
