@@ -443,11 +443,12 @@ if __name__ == "__main__":
         print("\n📊 Creating diverse pool profiles for training:")
         
         # Create pools with different risk profiles
-        fetcher.generate_predictive_synthetic_data('test_pool_1', 720, 'mixed')
-        fetcher.generate_predictive_synthetic_data('test_pool_2', 720, 'safe')
-        fetcher.generate_predictive_synthetic_data('uniswap_v2_usdc_eth', 720, 'mixed')
-        fetcher.generate_predictive_synthetic_data('aave_v3_eth', 720, 'risky')
-        fetcher.generate_predictive_synthetic_data('curve_3pool', 720, 'safe')
+        # Using 'synthetic_' prefix to avoid overwriting real protocol data
+        fetcher.generate_predictive_synthetic_data('synthetic_pool_1', 720, 'mixed')
+        fetcher.generate_predictive_synthetic_data('synthetic_pool_2', 720, 'safe')
+        fetcher.generate_predictive_synthetic_data('synthetic_uniswap_v2', 720, 'mixed')
+        fetcher.generate_predictive_synthetic_data('synthetic_aave_v3', 720, 'risky')
+        fetcher.generate_predictive_synthetic_data('synthetic_curve', 720, 'safe')
         # High risk pool with forced current risk state for testing
         fetcher.generate_predictive_synthetic_data('high_risk_pool', 720, 'crash_prone', force_current_risk_state=True)
         # Add an additional pool that's currently in crash
