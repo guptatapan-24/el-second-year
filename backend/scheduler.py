@@ -14,7 +14,7 @@ from threading import Lock
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from data_fetcher import DataFetcher
-from model_server import ModelServer
+from model_server import PredictiveModelServer as ModelServer
 from signer import PayloadSigner
 from submit_to_chain import ChainSubmitter
 from database import SessionLocal, Snapshot
