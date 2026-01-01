@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 from routers import protocols_router, submissions_router, timeseries_router
 
-from model_server import ModelServer
+from model_server import PredictiveModelServer as ModelServer
 from signer import PayloadSigner
 from submit_to_chain import ChainSubmitter
 from database import get_db, init_db, Snapshot, RiskSubmission
