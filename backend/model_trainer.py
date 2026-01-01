@@ -524,7 +524,7 @@ def main():
         return
     
     # Train on primary target (24h)
-    metrics = trainer.train(X, y_24h)
+    metrics = trainer.train(X, y_24h, df_full=df_full)
     
     # Save model
     metadata = trainer.save_model(metrics)
