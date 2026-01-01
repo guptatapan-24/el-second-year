@@ -364,6 +364,7 @@ if __name__ == "__main__":
     parser.add_argument('--once', action='store_true', help='Run once and exit')
     parser.add_argument('--all-protocols', action='store_true', help='Fetch all protocols')
     parser.add_argument('--synthetic', action='store_true', help='Generate synthetic data')
+    parser.add_argument('--predictive', action='store_true', help='Generate predictive synthetic data')
     parser.add_argument('--pool', default='0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc',
                         help='Pool address')
     args = parser.parse_args()
@@ -377,10 +378,24 @@ if __name__ == "__main__":
         print("Fetching data from all DeFi protocols...")
         snapshot_ids = fetcher.fetch_all_protocols()
         print(f"\n✓ Successfully created {len(snapshot_ids)} snapshots")
+    elif args.predictive:
+        print("Generating predictive synthetic data with crash patterns...")
+        print("\n📊 Creating diverse pool profiles for training:")
+        
+        # Create pools with different risk profiles
+        fetcher.generate_predictive_synthetic_data('test_pool_1', 720, 'mixed')
+        fetcher.generate_predictive_synthetic_data('test_pool_2', 720, 'safe')
+        fetcher.generate_predictive_synthetic_data('uniswap_v2_usdc_eth', 720, 'mixed')
+        fetcher.generate_predictive_synthetic_data('aave_v3_eth', 720, 'risky')
+        fetcher.generate_predictive_synthetic_data('curve_3pool', 720, 'safe')
+        fetcher.generate_predictive_synthetic_data('high_risk_pool', 720, 'crash_prone')
+        
+        print("\n✓ Predictive synthetic data generation complete")
+        print("  Run: python model_trainer.py to train the predictive model")
     elif args.synthetic:
         print("Generating synthetic data...")
-        fetcher.generate_synthetic_data('test_pool_1', 200)
-        fetcher.generate_synthetic_data('test_pool_2', 200)
+        fetcher.generate_predictive_synthetic_data('test_pool_1', 720, 'mixed')
+        fetcher.generate_predictive_synthetic_data('test_pool_2', 720, 'safe')
         print("Synthetic data generation complete")
     else:
         pool_id = "uniswap_v2_usdc_eth"
