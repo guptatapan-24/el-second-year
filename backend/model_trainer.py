@@ -158,7 +158,7 @@ class PredictiveModelTrainer:
         df_labeled = df[valid_mask].copy()
         
         # Print label distribution
-        print(f"\n📊 Label Distribution (primary target: label_24h)")
+        print("\n📊 Label Distribution (primary target: label_24h)")
         print(f"   label_24h: {int(df_labeled['label_24h'].sum())} crashes / {len(df_labeled)} total")
         print(f"   label_6h:  {int(df_labeled['label_6h'].sum())} crashes / {len(df_labeled)} total")
         
@@ -236,7 +236,7 @@ class PredictiveModelTrainer:
             Dictionary of evaluation metrics
         """
         print("\n🎯 Training Predictive Model...")
-        print(f"   Target: label_24h (TVL crash >20% in next 24 hours)")
+        print("   Target: label_24h (TVL crash >20% in next 24 hours)")
         
         # TIME-AWARE SPLIT (critical for no data leakage)
         split_idx = int(len(X) * train_ratio)
@@ -341,8 +341,8 @@ class PredictiveModelTrainer:
         
         print("   Confusion Matrix:")
         cm = metrics['confusion_matrix']
-        print(f"                 Predicted")
-        print(f"                 No Crash  Crash")
+        print("                 Predicted")
+        print("                 No Crash  Crash")
         print(f"   Actual No Crash  {cm[0][0]:5d}  {cm[0][1]:5d}")
         print(f"   Actual Crash     {cm[1][0]:5d}  {cm[1][1]:5d}")
     
@@ -476,7 +476,7 @@ def main():
     if metrics.get('roc_auc'):
         print(f"ROC-AUC: {metrics['roc_auc']:.4f}")
     print(f"F1-Score: {metrics['f1_score']:.4f}")
-    print(f"\nRun inference with:")
+    print("\nRun inference with:")
     print("   python model_server.py --run-once --pool test_pool_1")
 
 
