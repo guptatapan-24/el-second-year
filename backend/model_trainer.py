@@ -365,18 +365,23 @@ class PredictiveModelTrainer:
         print(f"   F1-Score:  {metrics['f1_score']:.4f}")
         
         # Handle classification report for single-class test set
-        unique_classes = set(y_true)
+        unique_true_classes = set(y_true)
+        unique_pred_classes = set(y_pred)
+        all_classes = unique_true_classes.union(unique_pred_classes)
+        
         print("\n   Classification Report:")
-        if len(unique_classes) == 1:
-            # Single class in test set - provide informative message
-            only_class = list(unique_classes)[0]
+        if len(unique_true_classes) == 1 and len(all_classes) == 1:
+            # Single class in both test set and predictions - provide informative message
+            only_class = list(unique_true_classes)[0]
             class_name = 'No Crash' if only_class == 0 else 'Crash'
             print(f"   ⚠ Test set contains only '{class_name}' samples")
             print(f"   Total samples: {len(y_true)}")
             print(f"   Predictions: {sum(y_pred == 0)} No Crash, {sum(y_pred == 1)} Crash")
         else:
-            # Both classes present - print full report
+            # Use labels parameter to handle cases with different classes in true vs pred
+            # This ensures classification_report works even if test set has 1 class but predictions have 2
             print(classification_report(y_true, y_pred, 
+                                        labels=[0, 1],
                                         target_names=['No Crash', 'Crash'],
                                         zero_division=0))
         
