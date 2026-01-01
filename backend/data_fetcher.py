@@ -248,12 +248,16 @@ class DataFetcher:
             crash_counter = 0
             
             # For crash_prone profile with force_current_risk_state, 
-            # ensure we end in a high-risk state
+            # ensure we end in a high-risk state (pre_crash or crash)
             if force_current_risk_state and risk_profile == 'crash_prone':
-                # Schedule a crash to happen at the end of the time series
-                forced_crash_start = num_samples - random.randint(20, 36)  # Start crash 20-36 hours before end
+                # Schedule a crash to START at the end of the time series
+                # The pre_crash phase will begin 12-24 hours before end and extend to the end
+                forced_crash_start = num_samples - random.randint(12, 24)
+                # Prevent transition from pre_crash to crash until very end
+                forced_crash_end_protection = num_samples - random.randint(3, 8)
             else:
                 forced_crash_start = None
+                forced_crash_end_protection = None
             
             snapshots = []
             
@@ -261,9 +265,15 @@ class DataFetcher:
                 timestamp = base_time + timedelta(hours=i)
                 
                 # Force crash state near the end for crash_prone pools
-                if forced_crash_start and i == forced_crash_start and regime == 'normal':
-                    regime = 'pre_crash'
-                    regime_duration = random.randint(8, 16)  # Pre-crash warning period
+                if forced_crash_start and i >= forced_crash_start:
+                    if regime == 'normal':
+                        regime = 'pre_crash'
+                        # Set duration to extend past the end of data
+                        regime_duration = num_samples - i + 10  # Will never reach 0 before data ends
+                    elif regime == 'pre_crash' and i >= forced_crash_end_protection:
+                        # Optionally transition to crash in the last few hours
+                        regime = 'crash'
+                        regime_duration = num_samples - i + 5
                 
                 # State machine for realistic price dynamics
                 if regime == 'normal':
