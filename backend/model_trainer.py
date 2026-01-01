@@ -249,6 +249,14 @@ class PredictiveModelTrainer:
         print(f"   Train crash rate: {y_train.mean()*100:.1f}%")
         print(f"   Test crash rate:  {y_test.mean()*100:.1f}%")
         
+        # Warn if test set has no positive samples
+        if y_test.sum() == 0:
+            print("\n   ⚠ WARNING: No crash events in test set!")
+            print("   This means all crashes occurred in early time periods (training set).")
+            print("   The model can still train but evaluation metrics will be limited.")
+            print("   Consider regenerating data with: python data_fetcher.py --predictive")
+            print("   (This will include pools with forced late-period crashes)")
+        
         # Handle class imbalance with scale_pos_weight
         # scale_pos_weight = num_negative / num_positive
         n_pos = y_train.sum()
