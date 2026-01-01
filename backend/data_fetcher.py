@@ -306,7 +306,8 @@ class DataFetcher:
                     current_tvl *= (1 - crash_rate + noise)
                     
                     regime_duration -= 1
-                    if regime_duration <= 0:
+                    # For forced pools, don't transition to recovery if we're in the final stretch
+                    if regime_duration <= 0 and (forced_crash_start is None or i < num_samples - 3):
                         regime = 'recovery'
                         regime_duration = random.randint(24, 72)  # Recovery period
                         
