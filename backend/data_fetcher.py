@@ -238,6 +238,10 @@ class DataFetcher:
             elif risk_profile == 'crash_prone':
                 base_tvl = 500_000
                 crash_probability = 0.008   # 0.8% per hour (~45% per month)
+            elif risk_profile == 'late_crash':
+                # Special profile: crashes biased toward later time periods (for test set coverage)
+                base_tvl = 750_000
+                crash_probability = 0.001  # Lower early crash prob
             else:  # mixed
                 base_tvl = 1_000_000
                 crash_probability = 0.0015  # 0.15% per hour (~10% per month)
@@ -259,10 +263,28 @@ class DataFetcher:
                 forced_crash_start = None
                 forced_crash_end_protection = None
             
+            # For late_crash profile, schedule crashes in the last 20% of data (test set coverage)
+            late_crash_times = []
+            if risk_profile == 'late_crash':
+                test_start = int(num_samples * 0.8)
+                # Schedule 2-4 crashes in the test window
+                num_late_crashes = random.randint(2, 4)
+                crash_spacing = (num_samples - test_start) // (num_late_crashes + 1)
+                for c in range(num_late_crashes):
+                    crash_hour = test_start + (c + 1) * crash_spacing + random.randint(-10, 10)
+                    crash_hour = max(test_start, min(crash_hour, num_samples - 30))  # Keep within bounds
+                    late_crash_times.append(crash_hour)
+                print(f"   Late crash profile: scheduled crashes at hours {late_crash_times}")
+            
             snapshots = []
             
             for i in range(num_samples):
                 timestamp = base_time + timedelta(hours=i)
+                
+                # Force crash at scheduled times for late_crash profile
+                if risk_profile == 'late_crash' and i in late_crash_times and regime == 'normal':
+                    regime = 'pre_crash'
+                    regime_duration = random.randint(6, 18)
                 
                 # Force crash state near the end for crash_prone pools
                 if forced_crash_start and i >= forced_crash_start:
