@@ -389,23 +389,18 @@ class PredictiveModelTrainer:
         cm = metrics['confusion_matrix']
         print("                 Predicted")
         print("                 No Crash  Crash")
-        # Handle case where confusion matrix might be 1x1, 1x2, or 2x2
+        # Confusion matrix is now always 2x2 due to labels=[0, 1] in _compute_metrics
+        print(f"   Actual No Crash  {cm[0][0]:5d}  {cm[0][1]:5d}")
+        print(f"   Actual Crash     {cm[1][0]:5d}  {cm[1][1]:5d}")
+        
+        # Additional info for single-class test sets
         unique_true_classes = set(y_true)
-        if len(cm) == 1:
-            # Only one class in test set actual values
-            if 0 in unique_true_classes:
-                # Only "No Crash" class in actual
-                print(f"   Actual No Crash  {cm[0][0] if len(cm[0]) > 0 else 0:5d}  {cm[0][1] if len(cm[0]) > 1 else 0:5d}")
-                print(f"   Actual Crash     {'N/A':>5s}  {'N/A':>5s}")
+        if len(unique_true_classes) == 1:
+            only_class = list(unique_true_classes)[0]
+            if only_class == 0:
+                print("\n   Note: Test set had no crash events (row 'Actual Crash' shows 0s)")
             else:
-                # Only "Crash" class in actual
-                print(f"   Actual No Crash  {'N/A':>5s}  {'N/A':>5s}")
-                print(f"   Actual Crash     {cm[0][0] if len(cm[0]) > 0 else 0:5d}  {cm[0][1] if len(cm[0]) > 1 else 0:5d}")
-        elif len(cm) == 2:
-            print(f"   Actual No Crash  {cm[0][0]:5d}  {cm[0][1] if len(cm[0]) > 1 else 0:5d}")
-            print(f"   Actual Crash     {cm[1][0]:5d}  {cm[1][1] if len(cm[1]) > 1 else 0:5d}")
-        else:
-            print(f"   Confusion matrix shape unexpected: {len(cm)}")
+                print("\n   Note: Test set had only crash events (row 'Actual No Crash' shows 0s)")
     
     def _print_feature_importance(self):
         """Print feature importance ranking."""
