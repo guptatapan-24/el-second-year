@@ -220,7 +220,7 @@ class PredictiveModelTrainer:
         return X, y_24h, y_6h, df_features
     
     def train(self, X: pd.DataFrame, y: pd.Series, 
-              train_ratio: float = 0.8) -> Dict:
+              train_ratio: float = 0.8, df_full: pd.DataFrame = None) -> Dict:
         """
         Train XGBoost classifier with time-aware split.
         
@@ -231,6 +231,7 @@ class PredictiveModelTrainer:
             X: Feature DataFrame
             y: Target labels (binary)
             train_ratio: Fraction of data for training (default 0.8)
+            df_full: Full dataframe with pool_id for per-pool splitting
             
         Returns:
             Dictionary of evaluation metrics
@@ -238,11 +239,32 @@ class PredictiveModelTrainer:
         print("\n🎯 Training Predictive Model...")
         print("   Target: label_24h (TVL crash >20% in next 24 hours)")
         
-        # TIME-AWARE SPLIT (critical for no data leakage)
-        split_idx = int(len(X) * train_ratio)
-        
-        X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-        y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+        # PER-POOL TIME-AWARE SPLIT (ensures crashes are distributed in both train & test)
+        if df_full is not None and 'pool_id' in df_full.columns:
+            print("   Using per-pool time-aware split...")
+            X_train_list, X_test_list = [], []
+            y_train_list, y_test_list = [], []
+            
+            for pool_id in df_full['pool_id'].unique():
+                pool_mask = df_full['pool_id'] == pool_id
+                X_pool = X.loc[pool_mask]
+                y_pool = y.loc[pool_mask]
+                
+                split_idx = int(len(X_pool) * train_ratio)
+                X_train_list.append(X_pool.iloc[:split_idx])
+                X_test_list.append(X_pool.iloc[split_idx:])
+                y_train_list.append(y_pool.iloc[:split_idx])
+                y_test_list.append(y_pool.iloc[split_idx:])
+            
+            X_train = pd.concat(X_train_list, ignore_index=True)
+            X_test = pd.concat(X_test_list, ignore_index=True)
+            y_train = pd.concat(y_train_list, ignore_index=True)
+            y_test = pd.concat(y_test_list, ignore_index=True)
+        else:
+            # Fallback to global time split
+            split_idx = int(len(X) * train_ratio)
+            X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+            y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
         
         print(f"   Train size: {len(X_train)}")
         print(f"   Test size:  {len(X_test)}")
