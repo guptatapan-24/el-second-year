@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 from datetime import datetime
-from routers import protocols_router, submissions_router, timeseries_router
+from routers import protocols_router, submissions_router, timeseries_router, risk_router
 
 from model_server import PredictiveModelServer as ModelServer
 from signer import PayloadSigner
