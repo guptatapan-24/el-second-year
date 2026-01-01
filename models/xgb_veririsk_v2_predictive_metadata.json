@@ -1,0 +1,100 @@
+{
+  "model_name": "xgb_veririsk_v2_predictive",
+  "model_version": "v2.0",
+  "model_type": "XGBClassifier",
+  "prediction_task": "binary_classification",
+  "prediction_target": "TVL crash >20% in next 24 hours",
+  "prediction_horizon": "24 hours",
+  "secondary_target": "TVL crash >10% in next 6 hours",
+  "sha256": "06e801272658f596d316f74e808d75263c0c6ea4eca881989010d39d642fc2da",
+  "ipfs_cid": "Qm...",
+  "train_date": "2026-01-01T06:36:28.248939",
+  "metrics": {
+    "roc_auc": 0.7181377864526856,
+    "precision": 0.7941176470588235,
+    "recall": 0.5094339622641509,
+    "f1_score": 0.6206896551724137,
+    "confusion_matrix": [
+      [
+        776,
+        7
+      ],
+      [
+        26,
+        27
+      ]
+    ],
+    "n_train": 3340,
+    "n_test": 836,
+    "train_crash_rate": 0.01407185628742515,
+    "test_crash_rate": 0.06339712918660287,
+    "scale_pos_weight": 70.06382978723404
+  },
+  "feature_names": [
+    "tvl_change_6h",
+    "tvl_change_24h",
+    "tvl_acceleration",
+    "volume_spike_ratio",
+    "reserve_imbalance",
+    "reserve_imbalance_rate",
+    "volatility_6h",
+    "volatility_24h",
+    "volatility_ratio",
+    "early_warning_score"
+  ],
+  "feature_importance": [
+    {
+      "feature": "reserve_imbalance",
+      "importance": 0.2803649306297302
+    },
+    {
+      "feature": "volume_spike_ratio",
+      "importance": 0.14599385857582092
+    },
+    {
+      "feature": "tvl_change_24h",
+      "importance": 0.10693817585706711
+    },
+    {
+      "feature": "early_warning_score",
+      "importance": 0.09020954370498657
+    },
+    {
+      "feature": "volatility_24h",
+      "importance": 0.0861818939447403
+    },
+    {
+      "feature": "volatility_6h",
+      "importance": 0.0787278562784195
+    },
+    {
+      "feature": "tvl_acceleration",
+      "importance": 0.0742257684469223
+    },
+    {
+      "feature": "tvl_change_6h",
+      "importance": 0.07016196101903915
+    },
+    {
+      "feature": "volatility_ratio",
+      "importance": 0.034240566194057465
+    },
+    {
+      "feature": "reserve_imbalance_rate",
+      "importance": 0.03295549377799034
+    }
+  ],
+  "hyperparameters": {
+    "n_estimators": 300,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "scale_pos_weight": 70.06382978723404
+  },
+  "design_notes": {
+    "label_type": "forward_looking",
+    "train_test_split": "time_based_no_shuffle",
+    "data_leakage_prevention": "features use only past data, labels use only future data"
+  }
+}
