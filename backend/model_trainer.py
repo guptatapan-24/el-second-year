@@ -333,7 +333,7 @@ class PredictiveModelTrainer:
         """Compute evaluation metrics."""
         metrics = {}
         
-        # ROC-AUC (if both classes present)
+        # ROC-AUC (if both classes present in y_true)
         if len(set(y_true)) > 1:
             metrics['roc_auc'] = float(roc_auc_score(y_true, y_pred_proba))
         else:
@@ -344,8 +344,8 @@ class PredictiveModelTrainer:
         metrics['recall'] = float(recall_score(y_true, y_pred, zero_division=0))
         metrics['f1_score'] = float(f1_score(y_true, y_pred, zero_division=0))
         
-        # Confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
+        # Confusion matrix with explicit labels to ensure consistent 2x2 shape
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
         metrics['confusion_matrix'] = cm.tolist()
         
         return metrics
