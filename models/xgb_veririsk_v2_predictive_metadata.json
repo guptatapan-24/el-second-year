@@ -6,9 +6,9 @@
   "prediction_target": "TVL crash >20% in next 24 hours",
   "prediction_horizon": "24 hours",
   "secondary_target": "TVL crash >10% in next 6 hours",
-  "sha256": "ffc4c57f6d302e8ea98b4f49ac50839100f889512d04ba10bc5b74551974cc2c",
+  "sha256": "8e9e5c4b58d3729bd758a7d6257c4d5f4daefaf6034a781947ceb20a23ba72d0",
   "ipfs_cid": "Qm...",
-  "train_date": "2026-01-01T10:00:52.507788",
+  "train_date": "2026-01-01T10:01:51.504651",
   "metrics": {
     "roc_auc": null,
     "precision": 0.0,
@@ -16,14 +16,14 @@
     "f1_score": 0.0,
     "confusion_matrix": [
       [
-        3830
+        4526
       ]
     ],
-    "n_train": 15316,
-    "n_test": 3830,
-    "train_crash_rate": 0.028075215460955864,
+    "n_train": 18100,
+    "n_test": 4526,
+    "train_crash_rate": 0.03580110497237569,
     "test_crash_rate": 0.0,
-    "scale_pos_weight": 34.61860465116279
+    "scale_pos_weight": 26.932098765432098
   },
   "feature_names": [
     "tvl_change_6h",
@@ -40,43 +40,43 @@
   "feature_importance": [
     {
       "feature": "reserve_imbalance",
-      "importance": 0.29893195629119873
+      "importance": 0.2868023216724396
     },
     {
       "feature": "early_warning_score",
-      "importance": 0.1616354137659073
-    },
-    {
-      "feature": "tvl_change_24h",
-      "importance": 0.10398304462432861
-    },
-    {
-      "feature": "volatility_24h",
-      "importance": 0.08960559219121933
+      "importance": 0.16188602149486542
     },
     {
       "feature": "tvl_change_6h",
-      "importance": 0.0762995257973671
+      "importance": 0.0930500403046608
     },
     {
-      "feature": "tvl_acceleration",
-      "importance": 0.07180553674697876
+      "feature": "tvl_change_24h",
+      "importance": 0.08349677920341492
+    },
+    {
+      "feature": "volatility_24h",
+      "importance": 0.0799972340464592
     },
     {
       "feature": "volume_spike_ratio",
-      "importance": 0.06644490361213684
+      "importance": 0.06979215145111084
     },
     {
       "feature": "volatility_6h",
-      "importance": 0.04809745028614998
+      "importance": 0.06035511568188667
+    },
+    {
+      "feature": "tvl_acceleration",
+      "importance": 0.058548856526613235
     },
     {
       "feature": "volatility_ratio",
-      "importance": 0.04227369651198387
+      "importance": 0.05606697127223015
     },
     {
       "feature": "reserve_imbalance_rate",
-      "importance": 0.040922876447439194
+      "importance": 0.05000453442335129
     }
   ],
   "hyperparameters": {
@@ -85,7 +85,7 @@
     "learning_rate": 0.05,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
-    "scale_pos_weight": 34.61860465116279
+    "scale_pos_weight": 26.932098765432098
   },
   "design_notes": {
     "label_type": "forward_looking",
