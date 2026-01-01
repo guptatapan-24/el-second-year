@@ -416,10 +416,14 @@ if __name__ == "__main__":
         fetcher.generate_predictive_synthetic_data('uniswap_v2_usdc_eth', 720, 'mixed')
         fetcher.generate_predictive_synthetic_data('aave_v3_eth', 720, 'risky')
         fetcher.generate_predictive_synthetic_data('curve_3pool', 720, 'safe')
-        fetcher.generate_predictive_synthetic_data('high_risk_pool', 720, 'crash_prone')
+        # High risk pool with forced current risk state for testing
+        fetcher.generate_predictive_synthetic_data('high_risk_pool', 720, 'crash_prone', force_current_risk_state=True)
+        # Add an additional pool that's currently in crash
+        fetcher.generate_predictive_synthetic_data('critical_risk_pool', 720, 'crash_prone', force_current_risk_state=True)
         
         print("\n✓ Predictive synthetic data generation complete")
         print("  Run: python model_trainer.py to train the predictive model")
+        print("  Note: high_risk_pool and critical_risk_pool are forced to end in crash/pre_crash state")
     elif args.synthetic:
         print("Generating synthetic data...")
         fetcher.generate_predictive_synthetic_data('test_pool_1', 720, 'mixed')
