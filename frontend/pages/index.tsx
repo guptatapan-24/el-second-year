@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import axios from 'axios';
-import { Shield, ChevronRight, Zap, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Shield, ChevronRight, Zap, Activity, TrendingUp, AlertTriangle, Database } from 'lucide-react';
 import GlobalStats from '../components/GlobalStats';
 import AlertFeed from '../components/AlertFeed';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorFallback from '../components/ErrorFallback';
+import DataInitializer from '../components/DataInitializer';
 
 export default function Home() {
   const [summary, setSummary] = useState<any>(null);
@@ -14,25 +15,45 @@ export default function Home() {
   const [health, setHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsInit, setNeedsInit] = useState(false);
+  const [showInitializer, setShowInitializer] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_API || 'http://localhost:8001';
 
   const fetchData = async () => {
     try {
       setError(null);
-      const [summaryRes, alertsRes, healthRes] = await Promise.all([
+      const [summaryRes, alertsRes, healthRes, statusRes] = await Promise.all([
         axios.get(`${API_URL}/api/risk/summary`),
         axios.get(`${API_URL}/api/risk/alerts?status=active`),
         axios.get(`${API_URL}/health`),
+        axios.get(`${API_URL}/api/protocols/status`),
       ]);
       setSummary(summaryRes.data);
       setAlerts(alertsRes.data.alerts || []);
       setHealth(healthRes.data);
+      
+      // Check if initialization is needed
+      const status = statusRes.data;
+      const dataEmpty = status.total_snapshots === 0 || !status.model_trained;
+      setNeedsInit(dataEmpty);
+      
+      // Show initializer if data is empty and not currently initializing
+      if (dataEmpty && !status.init_status?.running) {
+        setShowInitializer(true);
+      }
+      
       setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
       setLoading(false);
     }
+  };
+
+  const handleInitComplete = () => {
+    setShowInitializer(false);
+    setNeedsInit(false);
+    fetchData();
   };
 
   useEffect(() => {
