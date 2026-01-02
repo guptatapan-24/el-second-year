@@ -70,6 +70,23 @@ export default function Home() {
     );
   }
 
+  // Show initializer when data is empty
+  if (showInitializer) {
+    return (
+      <div className="relative min-h-[80vh] flex items-center justify-center">
+        {/* Background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-defi-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-defi-secondary/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
+        </div>
+        
+        <div className="relative z-10 w-full px-4">
+          <DataInitializer onInitComplete={handleInitComplete} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {/* Hero Section */}
