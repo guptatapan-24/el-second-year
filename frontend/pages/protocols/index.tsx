@@ -298,17 +298,52 @@ export default function Protocols() {
           animate={{ opacity: 1 }}
           className="text-center py-16 glass-card"
         >
-          <p className="text-xl text-gray-400 mb-4">No protocols match your filters</p>
-          <p className="text-gray-500 mb-6">Try adjusting filters or fetch new protocol data</p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleFetchProtocols}
-            disabled={isFetching}
-            className="px-6 py-3 bg-defi-primary text-white rounded-lg"
-          >
-            {isFetching ? 'Fetching...' : 'Fetch Protocol Data'}
-          </motion.button>
+          {!dataStatus?.data_ready || !dataStatus?.model_trained ? (
+            <>
+              <Database className="w-16 h-16 text-defi-primary mx-auto mb-4" />
+              <p className="text-xl text-white mb-2">System Not Initialized</p>
+              <p className="text-gray-400 mb-6">
+                Initialize VeriRisk with real DeFi protocol data from DeFiLlama
+              </p>
+              {isInitializing ? (
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-dark-700 text-defi-primary rounded-lg">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>{dataStatus?.init_status?.phase || 'Initializing...'}</span>
+                  {dataStatus?.init_status?.progress && (
+                    <span className="text-sm">({dataStatus.init_status.progress}%)</span>
+                  )}
+                </div>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleInitialize}
+                  className="px-6 py-3 bg-gradient-to-r from-defi-primary to-defi-secondary text-white rounded-lg flex items-center gap-2 mx-auto"
+                  data-testid="init-system-button"
+                >
+                  <Database className="w-5 h-5" />
+                  Initialize with Real Data
+                </motion.button>
+              )}
+              <p className="text-xs text-gray-500 mt-4">
+                This will fetch 30 days of historical data and train the ML model
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xl text-gray-400 mb-4">No protocols match your filters</p>
+              <p className="text-gray-500 mb-6">Try adjusting filters or fetch new protocol data</p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleFetchProtocols}
+                disabled={isFetching}
+                className="px-6 py-3 bg-defi-primary text-white rounded-lg"
+              >
+                {isFetching ? 'Fetching...' : 'Fetch Protocol Data'}
+              </motion.button>
+            </>
+          )}
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
