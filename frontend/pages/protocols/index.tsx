@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { RefreshCw, Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { RefreshCw, Download, TrendingUp, TrendingDown, Database, Brain, Loader2 } from 'lucide-react';
 import ProtocolRiskCard from '../../components/ProtocolRiskCard';
 import RiskFilter from '../../components/RiskFilter';
 import GlobalStats from '../../components/GlobalStats';
@@ -25,12 +25,29 @@ interface RiskData {
   active_alerts: number;
 }
 
+interface DataStatus {
+  total_snapshots: number;
+  pool_count: number;
+  hours_of_history: number;
+  model_trained: boolean;
+  data_ready: boolean;
+  init_status: {
+    running: boolean;
+    phase: string;
+    progress: number;
+    error: string | null;
+    completed: boolean;
+  };
+}
+
 export default function Protocols() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [risks, setRisks] = useState<Map<string, RiskData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [dataStatus, setDataStatus] = useState<DataStatus | null>(null);
 
   // Filter states
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('All');
