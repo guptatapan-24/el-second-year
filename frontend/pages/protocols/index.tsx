@@ -60,12 +60,14 @@ export default function Protocols() {
   const fetchData = async () => {
     try {
       setError(null);
-      const [protocolsRes, summaryRes] = await Promise.all([
+      const [protocolsRes, summaryRes, statusRes] = await Promise.all([
         axios.get(`${API_URL}/api/protocols`),
         axios.get(`${API_URL}/api/risk/summary`),
+        axios.get(`${API_URL}/api/protocols/status`),
       ]);
 
       setProtocols(protocolsRes.data);
+      setDataStatus(statusRes.data);
 
       // Create risk map from summary
       const riskMap = new Map<string, RiskData>();
@@ -73,10 +75,43 @@ export default function Protocols() {
         riskMap.set(pool.pool_id, pool);
       });
       setRisks(riskMap);
+      
+      // Check if initialization is running
+      if (statusRes.data.init_status?.running) {
+        setIsInitializing(true);
+      } else {
+        setIsInitializing(false);
+      }
+      
       setLoading(false);
     } catch (err: any) {
       setError(err.message || 'Failed to load protocols');
       setLoading(false);
+    }
+  };
+
+  const handleInitialize = async () => {
+    setIsInitializing(true);
+    try {
+      await axios.post(`${API_URL}/api/protocols/initialize?days=30`);
+      // Start polling for status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await axios.get(`${API_URL}/api/protocols/status`);
+          setDataStatus(statusRes.data);
+          
+          if (!statusRes.data.init_status?.running) {
+            clearInterval(pollInterval);
+            setIsInitializing(false);
+            await fetchData();
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
+        }
+      }, 2000);
+    } catch (err: any) {
+      console.error('Initialize error:', err);
+      setIsInitializing(false);
     }
   };
 
