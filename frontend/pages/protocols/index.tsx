@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { RefreshCw, Download, TrendingUp, TrendingDown } from 'lucide-react';
-import ProtocolRiskCard from '../components/ProtocolRiskCard';
-import RiskFilter from '../components/RiskFilter';
-import GlobalStats from '../components/GlobalStats';
-import LoadingSkeleton from '../components/LoadingSkeleton';
-import ErrorFallback from '../components/ErrorFallback';
+import ProtocolRiskCard from '../../components/ProtocolRiskCard';
+import RiskFilter from '../../components/RiskFilter';
+import GlobalStats from '../../components/GlobalStats';
+import LoadingSkeleton from '../../components/LoadingSkeleton';
+import ErrorFallback from '../../components/ErrorFallback';
 
 interface Protocol {
   pool_id: string;
