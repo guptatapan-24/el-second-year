@@ -222,11 +222,37 @@ export default function Protocols() {
             <RefreshCw className="w-4 h-4" />
             Refresh
           </motion.button>
+          
+          {/* Initialize button - shown when no data */}
+          {(!dataStatus?.data_ready || !dataStatus?.model_trained) && !isInitializing && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleInitialize}
+              className="px-4 py-2 bg-defi-secondary text-white rounded-lg flex items-center gap-2"
+              data-testid="initialize-button"
+            >
+              <Database className="w-4 h-4" />
+              Initialize System
+            </motion.button>
+          )}
+          
+          {/* Initializing indicator */}
+          {isInitializing && (
+            <div className="px-4 py-2 bg-dark-700 text-defi-primary rounded-lg flex items-center gap-2 border border-defi-primary/30">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">
+                {dataStatus?.init_status?.phase || 'Initializing...'}
+                {dataStatus?.init_status?.progress ? ` (${dataStatus.init_status.progress}%)` : ''}
+              </span>
+            </div>
+          )}
+          
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleFetchProtocols}
-            disabled={isFetching}
+            disabled={isFetching || isInitializing}
             className="px-4 py-2 bg-defi-primary text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="fetch-protocols-button"
           >
