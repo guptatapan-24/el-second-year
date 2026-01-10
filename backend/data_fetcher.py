@@ -308,7 +308,8 @@ class DataFetcher:
     
     def generate_predictive_synthetic_data(self, pool_id: str, num_samples: int = 720, 
                                             risk_profile: str = 'mixed',
-                                            force_current_risk_state: bool = False):
+                                            force_current_risk_state: bool = False,
+                                            fetch_count_override: int = None):
         """
         Generate synthetic time-series data with realistic crash patterns for predictive modeling.
         
