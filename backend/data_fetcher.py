@@ -466,17 +466,35 @@ class DataFetcher:
                     regime = 'pre_crash'
                     regime_duration = random.randint(8, 20)
                 
-                # For critical profile, stay in crash the entire time with severe decline
+                # For critical profile: Force crash in the last 72 hours so model detects it
                 if risk_profile == 'critical':
-                    # Severe continuous decline
-                    crash_rate = random.uniform(0.005, 0.02)  # 0.5-2% per hour continuous decline
-                    noise = np.random.normal(0, 0.01)
-                    current_tvl *= (1 - crash_rate + noise)
-                    current_tvl = max(current_tvl, base_tvl * 0.02)  # Very low floor
-                    regime = 'crash'
-                    volume_multiplier = random.uniform(4.0, 8.0)
-                    reserve_imbalance = random.uniform(0.30, 0.55)
-                    volatility = random.uniform(0.15, 0.25)
+                    if i < critical_crash_start_hour:
+                        # Normal-ish period but slightly declining
+                        change = np.random.normal(-0.002, 0.01)  # Slight downward bias
+                        current_tvl *= (1 + change)
+                        volume_multiplier = random.uniform(0.9, 1.3)
+                        reserve_imbalance = random.uniform(0.03, 0.08)
+                        volatility = random.uniform(0.02, 0.04)
+                    elif i < critical_crash_start_hour + 24:
+                        # Pre-crash phase (gradual decline) - 24 hours
+                        regime = 'pre_crash'
+                        decline_rate = random.uniform(0.015, 0.03)  # 1.5-3% per hour
+                        noise = np.random.normal(0, 0.015)
+                        current_tvl *= (1 - decline_rate + noise)
+                        volume_multiplier = random.uniform(2.0, 4.0)
+                        reserve_imbalance = random.uniform(0.12, 0.25)
+                        volatility = random.uniform(0.06, 0.12)
+                    else:
+                        # Full crash phase - severe decline
+                        regime = 'crash'
+                        crash_rate = random.uniform(0.03, 0.08)  # 3-8% per hour 
+                        noise = np.random.normal(0, 0.02)
+                        current_tvl *= (1 - crash_rate + noise)
+                        current_tvl = max(current_tvl, base_tvl * 0.05)  # 5% floor
+                        volume_multiplier = random.uniform(4.0, 8.0)
+                        reserve_imbalance = random.uniform(0.25, 0.50)
+                        volatility = random.uniform(0.12, 0.22)
+                        crash_counter = 1
                 else:
                     # Force crash state near the end for crash_prone pools
                     if forced_crash_start is not None and i >= forced_crash_start:
