@@ -199,6 +199,47 @@ class DataFetcher:
         """Legacy method - use generate_predictive_synthetic_data instead"""
         return self.generate_predictive_synthetic_data(pool_id, num_samples)
     
+    def regenerate_synthetic_pools(self):
+        """
+        Regenerate all synthetic pools with new random data.
+        Called when "Fetch Real Data" is clicked to add variation to synthetic pools.
+        
+        This ensures:
+        - high_risk_pool: Always ends in crash/pre_crash state (high risk)
+        - critical_risk_pool: Always in critical state (immediate crash)
+        - late_crash_pool_*: Progress through states - start normal, become harmful over time
+        - Other synthetic pools: Random variation
+        """
+        import numpy as np
+        
+        print("\n" + "="*70)
+        print("🔄 REGENERATING SYNTHETIC POOLS")
+        print("="*70)
+        
+        # Define synthetic pool configurations
+        synthetic_configs = [
+            ('synthetic_pool_1', 720, 'mixed', False),
+            ('synthetic_pool_2', 720, 'safe', False),
+            ('synthetic_uniswap_v2', 720, 'mixed', False),
+            ('synthetic_aave_v3', 720, 'risky', False),
+            ('synthetic_curve', 720, 'safe', False),
+            # High risk pool - always ends in crash/pre_crash state
+            ('high_risk_pool', 720, 'crash_prone', True),
+            # Critical risk pool - immediate crash state
+            ('critical_risk_pool', 720, 'critical', True),
+            # Late crash pools - use evolving profile
+            ('late_crash_pool_1', 720, 'late_crash_evolving', False),
+            ('late_crash_pool_2', 720, 'late_crash_evolving', False),
+            ('late_crash_pool_3', 720, 'late_crash_evolving', False),
+        ]
+        
+        for pool_id, num_samples, risk_profile, force_current_risk_state in synthetic_configs:
+            self.generate_predictive_synthetic_data(pool_id, num_samples, risk_profile, force_current_risk_state)
+        
+        print("\n" + "="*70)
+        print("✅ SYNTHETIC POOLS REGENERATED")
+        print("="*70)
+    
     def generate_predictive_synthetic_data(self, pool_id: str, num_samples: int = 720, 
                                             risk_profile: str = 'mixed',
                                             force_current_risk_state: bool = False):
@@ -214,7 +255,7 @@ class DataFetcher:
         Args:
             pool_id: Pool identifier
             num_samples: Number of hourly snapshots (default 720 = 30 days)
-            risk_profile: 'safe', 'risky', 'mixed', 'crash_prone'
+            risk_profile: 'safe', 'risky', 'mixed', 'crash_prone', 'critical', 'late_crash_evolving'
             force_current_risk_state: If True, ensures pool ends in pre_crash/crash state
         """
         import numpy as np
@@ -238,10 +279,19 @@ class DataFetcher:
             elif risk_profile == 'crash_prone':
                 base_tvl = 500_000
                 crash_probability = 0.008   # 0.8% per hour (~45% per month)
+            elif risk_profile == 'critical':
+                # Critical risk pool - ALWAYS in crash state, very high risk
+                base_tvl = 300_000
+                crash_probability = 0.02  # Very high crash probability
             elif risk_profile == 'late_crash':
                 # Special profile: crashes biased toward later time periods (for test set coverage)
                 base_tvl = 750_000
                 crash_probability = 0.001  # Lower early crash prob
+            elif risk_profile == 'late_crash_evolving':
+                # Special profile: starts normal, becomes harmful when data is refetched
+                # This simulates pools that look fine initially but degrade over time
+                base_tvl = 900_000
+                crash_probability = 0.0008  # Low initial crash probability
             else:  # mixed
                 base_tvl = 1_000_000
                 crash_probability = 0.0015  # 0.15% per hour (~10% per month)
@@ -259,6 +309,10 @@ class DataFetcher:
                 forced_crash_start = num_samples - random.randint(12, 24)
                 # Prevent transition from pre_crash to crash until very end
                 forced_crash_end_protection = num_samples - random.randint(3, 8)
+            elif force_current_risk_state and risk_profile == 'critical':
+                # Critical pool: immediately in crash state from the start
+                forced_crash_start = 0  # Start in crash immediately
+                forced_crash_end_protection = num_samples  # Never recover
             else:
                 forced_crash_start = None
                 forced_crash_end_protection = None
@@ -275,6 +329,28 @@ class DataFetcher:
                     crash_hour = max(test_start, min(crash_hour, num_samples - 30))  # Keep within bounds
                     late_crash_times.append(crash_hour)
                 print(f"   Late crash profile: scheduled crashes at hours {late_crash_times}")
+            
+            # For late_crash_evolving profile - calculate based on fetch count
+            # The more times data is fetched, the more likely to be in crash state
+            fetch_count = self._get_fetch_count_for_pool(pool_id, db)
+            if risk_profile == 'late_crash_evolving':
+                # Evolution: each fetch increases crash probability
+                # Fetch 0 (initial): Normal
+                # Fetch 1+: Increasing crash probability
+                evolution_factor = min(fetch_count, 5)  # Cap at 5 fetches
+                crash_probability = 0.0008 + (evolution_factor * 0.003)  # Increases significantly
+                
+                # After 2+ fetches, force late crash behavior
+                if fetch_count >= 2:
+                    test_start = int(num_samples * (0.9 - fetch_count * 0.1))  # Earlier and earlier
+                    test_start = max(int(num_samples * 0.5), test_start)  # Don't go below 50%
+                    num_late_crashes = min(2 + fetch_count, 5)
+                    crash_spacing = (num_samples - test_start) // (num_late_crashes + 1)
+                    for c in range(num_late_crashes):
+                        crash_hour = test_start + (c + 1) * crash_spacing + random.randint(-5, 5)
+                        crash_hour = max(test_start, min(crash_hour, num_samples - 20))
+                        late_crash_times.append(crash_hour)
+                    print(f"   Late crash evolving (fetch #{fetch_count}): crashes at {late_crash_times}")
             
             snapshots = []
             
