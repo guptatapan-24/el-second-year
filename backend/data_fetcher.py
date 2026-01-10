@@ -336,33 +336,36 @@ class DataFetcher:
             
             base_time = datetime.utcnow() - timedelta(hours=num_samples)
             
+            # Add variation multiplier for regeneration (random between 0.8 and 1.2)
+            variation_multiplier = random.uniform(0.85, 1.15)
+            
             # Initialize TVL trajectory based on risk profile
             # crash_probability is the per-hour probability (as decimal)
             if risk_profile == 'safe':
-                base_tvl = 2_000_000
+                base_tvl = 2_000_000 * variation_multiplier
                 crash_probability = 0.0005  # 0.05% per hour (~3.5% per month)
             elif risk_profile == 'risky':
-                base_tvl = 800_000
+                base_tvl = 800_000 * variation_multiplier
                 crash_probability = 0.003   # 0.3% per hour (~20% per month)
             elif risk_profile == 'crash_prone':
-                base_tvl = 500_000
+                base_tvl = 500_000 * variation_multiplier
                 crash_probability = 0.008   # 0.8% per hour (~45% per month)
             elif risk_profile == 'critical':
                 # Critical risk pool - ALWAYS in crash state, very high risk
                 # The entire time series should show crash behavior to ensure HIGH risk prediction
-                base_tvl = 300_000
+                base_tvl = 300_000 * variation_multiplier
                 crash_probability = 0.05  # Very high crash probability - increased
             elif risk_profile == 'late_crash':
                 # Special profile: crashes biased toward later time periods (for test set coverage)
-                base_tvl = 750_000
+                base_tvl = 750_000 * variation_multiplier
                 crash_probability = 0.001  # Lower early crash prob
             elif risk_profile == 'late_crash_evolving':
                 # Special profile: starts normal, becomes harmful when data is refetched
                 # This simulates pools that look fine initially but degrade over time
-                base_tvl = 900_000
+                base_tvl = 900_000 * variation_multiplier
                 crash_probability = 0.0008  # Low initial crash probability
             else:  # mixed
-                base_tvl = 1_000_000
+                base_tvl = 1_000_000 * variation_multiplier
                 crash_probability = 0.0015  # 0.15% per hour (~10% per month)
             
             current_tvl = base_tvl
