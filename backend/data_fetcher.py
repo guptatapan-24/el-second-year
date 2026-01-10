@@ -387,6 +387,14 @@ class DataFetcher:
                         late_crash_times.append(crash_hour)
                     print(f"   Late crash evolving (fetch #{fetch_count}): crashes at {late_crash_times}")
             
+            # For critical profile, start in crash regime immediately
+            if risk_profile == 'critical':
+                regime = 'crash'
+                regime_duration = num_samples  # Stay in crash the entire time
+                crash_counter = 1
+                # Start with severely reduced TVL
+                current_tvl = base_tvl * 0.3
+            
             snapshots = []
             
             for i in range(num_samples):
@@ -397,62 +405,79 @@ class DataFetcher:
                     regime = 'pre_crash'
                     regime_duration = random.randint(6, 18)
                 
-                # Force crash state near the end for crash_prone pools
-                if forced_crash_start and i >= forced_crash_start:
-                    if regime == 'normal':
-                        regime = 'pre_crash'
-                        # Set duration to extend past the end of data
-                        regime_duration = num_samples - i + 10  # Will never reach 0 before data ends
-                    elif regime == 'pre_crash' and i >= forced_crash_end_protection:
-                        # Optionally transition to crash in the last few hours
-                        regime = 'crash'
-                        regime_duration = num_samples - i + 5
+                # Force crash at scheduled times for late_crash_evolving profile
+                if risk_profile == 'late_crash_evolving' and i in late_crash_times and regime == 'normal':
+                    regime = 'pre_crash'
+                    regime_duration = random.randint(8, 20)
                 
-                # State machine for realistic price dynamics
-                if regime == 'normal':
-                    # Small random walk
-                    change = np.random.normal(0, 0.01)  # 1% std dev
-                    current_tvl *= (1 + change)
-                    
-                    # Check for crash trigger (fixed: no extra /100)
-                    if random.random() < crash_probability:
-                        regime = 'pre_crash'
-                        regime_duration = random.randint(6, 24)  # 6-24 hours warning
-                        
-                elif regime == 'pre_crash':
-                    # Gradual decline with increasing volatility
-                    decline_rate = 0.008 + 0.005 * (1 - min(regime_duration, 24) / 24)  # Accelerating decline
-                    noise = np.random.normal(0, 0.02)
-                    current_tvl *= (1 - decline_rate + noise)
-                    
-                    regime_duration -= 1
-                    # Only transition to crash if not in forced protection period
-                    if regime_duration <= 0 and (forced_crash_end_protection is None or i < forced_crash_end_protection):
-                        regime = 'crash'
-                        regime_duration = random.randint(6, 18)  # Crash duration
-                        crash_counter += 1
-                        
-                elif regime == 'crash':
-                    # Sharp decline
-                    crash_rate = random.uniform(0.04, 0.10)  # 4-10% per hour (more severe)
-                    noise = np.random.normal(0, 0.015)
-                    current_tvl *= (1 - crash_rate + noise)
-                    
-                    regime_duration -= 1
-                    # For forced pools, don't transition to recovery if we're in the final stretch
-                    if regime_duration <= 0 and (forced_crash_start is None or i < num_samples - 3):
-                        regime = 'recovery'
-                        regime_duration = random.randint(24, 72)  # Recovery period
-                        
-                elif regime == 'recovery':
-                    # Slow recovery
-                    recovery_rate = random.uniform(0.002, 0.008)
+                # For critical profile, stay in crash the entire time with severe decline
+                if risk_profile == 'critical':
+                    # Severe continuous decline
+                    crash_rate = random.uniform(0.005, 0.02)  # 0.5-2% per hour continuous decline
                     noise = np.random.normal(0, 0.01)
-                    current_tvl *= (1 + recovery_rate + noise)
+                    current_tvl *= (1 - crash_rate + noise)
+                    current_tvl = max(current_tvl, base_tvl * 0.02)  # Very low floor
+                    regime = 'crash'
+                    volume_multiplier = random.uniform(4.0, 8.0)
+                    reserve_imbalance = random.uniform(0.30, 0.55)
+                    volatility = random.uniform(0.15, 0.25)
+                else:
+                    # Force crash state near the end for crash_prone pools
+                    if forced_crash_start is not None and i >= forced_crash_start:
+                        if regime == 'normal':
+                            regime = 'pre_crash'
+                            # Set duration to extend past the end of data
+                            regime_duration = num_samples - i + 10  # Will never reach 0 before data ends
+                        elif regime == 'pre_crash' and i >= forced_crash_end_protection:
+                            # Optionally transition to crash in the last few hours
+                            regime = 'crash'
+                            regime_duration = num_samples - i + 5
                     
-                    regime_duration -= 1
-                    if regime_duration <= 0:
-                        regime = 'normal'
+                    # State machine for realistic price dynamics
+                    if regime == 'normal':
+                        # Small random walk
+                        change = np.random.normal(0, 0.01)  # 1% std dev
+                        current_tvl *= (1 + change)
+                        
+                        # Check for crash trigger (fixed: no extra /100)
+                        if random.random() < crash_probability:
+                            regime = 'pre_crash'
+                            regime_duration = random.randint(6, 24)  # 6-24 hours warning
+                            
+                    elif regime == 'pre_crash':
+                        # Gradual decline with increasing volatility
+                        decline_rate = 0.008 + 0.005 * (1 - min(regime_duration, 24) / 24)  # Accelerating decline
+                        noise = np.random.normal(0, 0.02)
+                        current_tvl *= (1 - decline_rate + noise)
+                        
+                        regime_duration -= 1
+                        # Only transition to crash if not in forced protection period
+                        if regime_duration <= 0 and (forced_crash_end_protection is None or i < forced_crash_end_protection):
+                            regime = 'crash'
+                            regime_duration = random.randint(6, 18)  # Crash duration
+                            crash_counter += 1
+                            
+                    elif regime == 'crash':
+                        # Sharp decline
+                        crash_rate = random.uniform(0.04, 0.10)  # 4-10% per hour (more severe)
+                        noise = np.random.normal(0, 0.015)
+                        current_tvl *= (1 - crash_rate + noise)
+                        
+                        regime_duration -= 1
+                        # For forced pools, don't transition to recovery if we're in the final stretch
+                        if regime_duration <= 0 and (forced_crash_start is None or i < num_samples - 3):
+                            regime = 'recovery'
+                            regime_duration = random.randint(24, 72)  # Recovery period
+                            
+                    elif regime == 'recovery':
+                        # Slow recovery
+                        recovery_rate = random.uniform(0.002, 0.008)
+                        noise = np.random.normal(0, 0.01)
+                        current_tvl *= (1 + recovery_rate + noise)
+                        
+                        regime_duration -= 1
+                        if regime_duration <= 0:
+                            regime = 'normal'
                 
                 # Ensure TVL doesn't go negative or too low
                 current_tvl = max(current_tvl, base_tvl * 0.05)  # Allow lower floor for crash_prone
