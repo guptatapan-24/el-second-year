@@ -195,15 +195,17 @@ class DataFetcher:
         finally:
             db.close()
     
-    def _get_fetch_count_for_pool(self, pool_id: str, db) -> int:
+    def _get_fetch_count_for_pool(self, pool_id: str, db=None) -> int:
         """
         Get the approximate fetch count based on stored metadata.
         Uses a simple metadata table or count of distinct fetch batches.
         """
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+        
         try:
-            # Count distinct snapshot batches by source timestamp prefix
-            from sqlalchemy import func
-            
             # Check if pool has fetch history in features
             latest_snapshot = db.query(Snapshot).filter(
                 Snapshot.pool_id == pool_id
@@ -214,21 +216,33 @@ class DataFetcher:
             return 0
         except Exception:
             return 0
+        finally:
+            if close_db:
+                db.close()
     
-    def _increment_fetch_count(self, pool_id: str, db):
+    def _increment_fetch_count(self, pool_id: str, db=None):
         """Increment the fetch count for a pool in the latest snapshot."""
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+        
         try:
             latest_snapshot = db.query(Snapshot).filter(
                 Snapshot.pool_id == pool_id
             ).order_by(Snapshot.timestamp.desc()).first()
             
             if latest_snapshot:
-                features = latest_snapshot.features or {}
+                features = dict(latest_snapshot.features) if latest_snapshot.features else {}
                 features['fetch_count'] = features.get('fetch_count', 0) + 1
                 latest_snapshot.features = features
                 db.commit()
+                print(f"   📈 {pool_id}: fetch_count incremented to {features['fetch_count']}")
         except Exception as e:
             print(f"Error incrementing fetch count: {e}")
+        finally:
+            if close_db:
+                db.close()
     
     def generate_synthetic_data(self, pool_id: str, num_samples: int = 300):
         """Legacy method - use generate_predictive_synthetic_data instead"""
