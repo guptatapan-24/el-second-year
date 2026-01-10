@@ -48,7 +48,7 @@ REAL_PROTOCOLS = {
     'uniswap_v3': {
         'slug': 'uniswap-v3', 
         'name': 'Uniswap V3',
-        'pools': ['usdc_eth_03', 'usdc_eth_005', 'dai_usdc_001'],
+        'pools': ['usdc_eth_0.3pct', 'usdc_eth_0.05pct', 'dai_usdc_0.01pct'],
         'pool_weights': [0.15, 0.25, 0.05]
     },
     'aave_v3': {
