@@ -241,7 +241,7 @@ class DataFetcher:
         
         This ensures:
         - high_risk_pool: Always ends in crash/pre_crash state (high risk)
-        - critical_risk_pool: Always in critical state (immediate crash)
+        - critical_risk_pool: Always in critical state (immediate crash) - ALWAYS HIGH RISK
         - late_crash_pool_*: Progress through states - start normal, become harmful over time
         - Other synthetic pools: Random variation
         """
@@ -260,13 +260,22 @@ class DataFetcher:
             ('synthetic_curve', 720, 'safe', False),
             # High risk pool - always ends in crash/pre_crash state
             ('high_risk_pool', 720, 'crash_prone', True),
-            # Critical risk pool - immediate crash state
+            # Critical risk pool - CRITICAL profile, always HIGH risk
             ('critical_risk_pool', 720, 'critical', True),
             # Late crash pools - use evolving profile
             ('late_crash_pool_1', 720, 'late_crash_evolving', False),
             ('late_crash_pool_2', 720, 'late_crash_evolving', False),
             ('late_crash_pool_3', 720, 'late_crash_evolving', False),
         ]
+        
+        # Increment fetch count for all evolving pools before regeneration
+        db = SessionLocal()
+        try:
+            for pool_id, _, risk_profile, _ in synthetic_configs:
+                if risk_profile == 'late_crash_evolving':
+                    self._increment_fetch_count(pool_id, db)
+        finally:
+            db.close()
         
         for pool_id, num_samples, risk_profile, force_current_risk_state in synthetic_configs:
             self.generate_predictive_synthetic_data(pool_id, num_samples, risk_profile, force_current_risk_state)
