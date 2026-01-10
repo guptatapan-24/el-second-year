@@ -8,6 +8,9 @@ import sys
 import os
 import logging
 import threading
+os.environ["PYTHONUTF8"] = "1"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +105,9 @@ def get_data_status():
         if latest and oldest:
             hours_of_history = int((latest - oldest).total_seconds() / 3600)
         
-        # Check if model exists
-        model_path = "/app/models/xgb_veririsk_v2_predictive.pkl"
+        # Check if model exists - use cross-platform path
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        model_path = os.path.join(os.path.dirname(backend_dir), "models", "xgb_veririsk_v2_predictive.pkl")
         model_exists = os.path.exists(model_path)
         
         # Get init status
@@ -133,7 +137,8 @@ def run_full_initialization(days: int = 30):
         _init_status["error"] = None
         _init_status["completed"] = False
     
-    backend_dir = "/app/backend"
+    # Use cross-platform path detection
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     try:
         # Phase 1: Fetch historical data from DeFiLlama
@@ -249,10 +254,12 @@ def train_model_endpoint(background_tasks: BackgroundTasks):
     """
     def train_task():
         try:
+            # Use cross-platform path detection
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             update_status("Training ML model...", 50)
             result = subprocess.run(
                 [sys.executable, "model_trainer.py"],
-                cwd="/app/backend",
+                cwd=backend_dir,
                 capture_output=True,
                 text=True,
                 timeout=300

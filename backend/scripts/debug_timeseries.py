@@ -30,7 +30,9 @@ import os
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-
+os.environ["PYTHONUTF8"] = "1"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 # Add parent directory to path FIRST
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)

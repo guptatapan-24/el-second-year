@@ -28,6 +28,9 @@ from db_models.alert import Alert
 from sqlalchemy import desc, func
 
 router = APIRouter(prefix="/risk")
+os.environ["PYTHONUTF8"] = "1"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 
 # ----- Pydantic Response Models -----

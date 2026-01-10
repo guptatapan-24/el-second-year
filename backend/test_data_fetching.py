@@ -5,6 +5,9 @@ import sys
 from datetime import datetime
 from database import SessionLocal, Snapshot, init_db
 from data_fetcher import DataFetcher
+# os.environ["PYTHONUTF8"] = "1"
+# sys.stdout.reconfigure(encoding="utf-8")
+# sys.stderr.reconfigure(encoding="utf-8")
 
 def test_data_fetching():
     """Test the complete data fetching pipeline"""

@@ -33,6 +33,9 @@ from typing import Dict, List, Tuple, Optional
 import shap
 import sys
 import os
+os.environ["PYTHONUTF8"] = "1"
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 import argparse
 
 # Add parent directory to path

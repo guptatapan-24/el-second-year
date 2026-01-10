@@ -24,6 +24,8 @@ from typing import List, Dict
 import json
 import requests
 import time
+# import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
