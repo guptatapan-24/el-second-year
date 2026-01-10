@@ -93,6 +93,7 @@ class PoolRiskSummary(BaseModel):
     latest_risk_score: float
     latest_risk_level: str
     active_alerts: int
+    tvl: float = 0  # Added TVL field
 
 
 class RiskSummaryResponse(BaseModel):
@@ -101,6 +102,7 @@ class RiskSummaryResponse(BaseModel):
     medium_risk_pools: int
     low_risk_pools: int
     total_active_alerts: int
+    total_tvl: float = 0  # Added total TVL
     pools: List[PoolRiskSummary]
     timestamp: str
 
@@ -234,12 +236,13 @@ def get_risk_summary():
     Provides overview for demo presentation:
     - Count of pools by risk level
     - Total active alerts
-    - Per-pool summary
+    - Per-pool summary with TVL
     """
     db = SessionLocal()
     try:
         # Get latest risk for each pool using subquery
         from sqlalchemy import func
+        from database import Snapshot
         
         subq = (
             db.query(
@@ -260,6 +263,29 @@ def get_risk_summary():
             .all()
         )
         
+        # Get latest TVL for each pool from Snapshot table
+        tvl_subq = (
+            db.query(
+                Snapshot.pool_id,
+                func.max(Snapshot.timestamp).label('max_ts')
+            )
+            .group_by(Snapshot.pool_id)
+            .subquery()
+        )
+        
+        latest_snapshots = (
+            db.query(Snapshot.pool_id, Snapshot.tvl)
+            .join(
+                tvl_subq,
+                (Snapshot.pool_id == tvl_subq.c.pool_id) &
+                (Snapshot.timestamp == tvl_subq.c.max_ts)
+            )
+            .all()
+        )
+        
+        # Create TVL lookup map
+        tvl_by_pool = {s.pool_id: s.tvl or 0 for s in latest_snapshots}
+        
         # Count by risk level
         high_count = sum(1 for r in latest_risks if r.risk_level == 'HIGH')
         medium_count = sum(1 for r in latest_risks if r.risk_level == 'MEDIUM')
@@ -276,13 +302,17 @@ def get_risk_summary():
         
         total_alerts = sum(alert_by_pool.values())
         
-        # Build pool summaries
+        # Calculate total TVL
+        total_tvl = sum(tvl_by_pool.values())
+        
+        # Build pool summaries with TVL
         pools = [
             PoolRiskSummary(
                 pool_id=r.pool_id,
                 latest_risk_score=r.risk_score,
                 latest_risk_level=r.risk_level,
-                active_alerts=alert_by_pool.get(r.pool_id, 0)
+                active_alerts=alert_by_pool.get(r.pool_id, 0),
+                tvl=tvl_by_pool.get(r.pool_id, 0)
             )
             for r in sorted(latest_risks, key=lambda x: x.risk_score, reverse=True)
         ]
@@ -293,6 +323,7 @@ def get_risk_summary():
             medium_risk_pools=medium_count,
             low_risk_pools=low_count,
             total_active_alerts=total_alerts,
+            total_tvl=total_tvl,
             pools=pools,
             timestamp=datetime.utcnow().isoformat()
         )

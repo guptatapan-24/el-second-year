@@ -193,7 +193,7 @@ export default function Home() {
           totalProtocols={summary?.total_pools || 0}
           highRiskCount={summary?.high_risk_pools || 0}
           alertsToday={alerts.length}
-          totalTVL={summary?.pools?.reduce((sum: number, p: any) => sum + (p.tvl || 0), 0) || 0}
+          totalTVL={summary?.total_tvl || summary?.pools?.reduce((sum: number, p: any) => sum + (p.tvl || 0), 0) || 0}
           avgRisk={
             summary?.pools?.length > 0
               ? summary.pools.reduce((sum: number, p: any) => sum + p.latest_risk_score, 0) / summary.pools.length
