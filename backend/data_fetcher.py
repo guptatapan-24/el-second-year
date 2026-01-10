@@ -349,8 +349,9 @@ class DataFetcher:
                 crash_probability = 0.008   # 0.8% per hour (~45% per month)
             elif risk_profile == 'critical':
                 # Critical risk pool - ALWAYS in crash state, very high risk
+                # The entire time series should show crash behavior to ensure HIGH risk prediction
                 base_tvl = 300_000
-                crash_probability = 0.02  # Very high crash probability
+                crash_probability = 0.05  # Very high crash probability - increased
             elif risk_profile == 'late_crash':
                 # Special profile: crashes biased toward later time periods (for test set coverage)
                 base_tvl = 750_000
