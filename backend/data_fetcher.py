@@ -574,14 +574,16 @@ class DataFetcher:
                 # Ensure TVL doesn't go negative or too low
                 # For critical pools, allow lower floor since they're always crashing
                 if risk_profile == 'critical':
-                    current_tvl = max(current_tvl, base_tvl * 0.01)  # 1% floor for critical
+                    current_tvl = max(current_tvl, base_tvl * 0.005)  # 0.5% floor for critical
                 else:
                     current_tvl = max(current_tvl, base_tvl * 0.05)  # 5% floor for others
                 # Cap TVL growth
                 current_tvl = min(current_tvl, base_tvl * 2.0)
                 
                 # Generate correlated features based on regime
-                if regime == 'crash':
+                # Skip this for critical profile since we set them in the critical block above
+                if risk_profile != 'critical':
+                    if regime == 'crash':
                     # High volume during crash (panic selling)
                     volume_multiplier = random.uniform(3.0, 7.0)
                     reserve_imbalance = random.uniform(0.20, 0.50)
