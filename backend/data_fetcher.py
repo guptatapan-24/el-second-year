@@ -596,17 +596,19 @@ if __name__ == "__main__":
         fetcher.generate_predictive_synthetic_data('synthetic_curve', 720, 'safe')
         # High risk pool with forced current risk state for testing
         fetcher.generate_predictive_synthetic_data('high_risk_pool', 720, 'crash_prone', force_current_risk_state=True)
-        # Add an additional pool that's currently in crash
-        fetcher.generate_predictive_synthetic_data('critical_risk_pool', 720, 'crash_prone', force_current_risk_state=True)
+        # Critical risk pool - uses 'critical' profile (always in crash state)
+        fetcher.generate_predictive_synthetic_data('critical_risk_pool', 720, 'critical', force_current_risk_state=True)
         # Add late_crash pools to ensure test set has crash events for proper evaluation
-        fetcher.generate_predictive_synthetic_data('late_crash_pool_1', 720, 'late_crash')
-        fetcher.generate_predictive_synthetic_data('late_crash_pool_2', 720, 'late_crash')
-        fetcher.generate_predictive_synthetic_data('late_crash_pool_3', 720, 'late_crash')
+        # These start NORMAL initially and become harmful when data is refetched
+        fetcher.generate_predictive_synthetic_data('late_crash_pool_1', 720, 'late_crash_evolving')
+        fetcher.generate_predictive_synthetic_data('late_crash_pool_2', 720, 'late_crash_evolving')
+        fetcher.generate_predictive_synthetic_data('late_crash_pool_3', 720, 'late_crash_evolving')
         
         print("\n✓ Predictive synthetic data generation complete")
         print("  Run: python model_trainer.py to train the predictive model")
-        print("  Note: high_risk_pool and critical_risk_pool are forced to end in crash/pre_crash state")
-        print("  Note: late_crash_pool_* have crashes scheduled in the last 20% (test set)")
+        print("  Note: high_risk_pool is forced to end in crash/pre_crash state")
+        print("  Note: critical_risk_pool is ALWAYS in crash state (highest risk)")
+        print("  Note: late_crash_pool_* start normal, become harmful when data is refetched")
     elif args.synthetic:
         print("Generating synthetic data...")
         fetcher.generate_predictive_synthetic_data('test_pool_1', 720, 'mixed')
