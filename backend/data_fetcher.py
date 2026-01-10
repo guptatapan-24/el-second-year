@@ -412,36 +412,37 @@ class DataFetcher:
             
             if risk_profile == 'late_crash_evolving':
                 # Evolution: each fetch increases crash probability
-                # Fetch 0 (initial): Completely normal - LOW risk
-                # Fetch 1: Slightly elevated - still mostly LOW/MEDIUM
-                # Fetch 2+: Increasing crash probability - becomes harmful (HIGH risk)
+                # Fetch 0 (initial): Completely normal - LOW risk (NEVER crashes)
+                # Fetch 1: Slightly elevated - might have minor decline (LOW-MEDIUM risk)
+                # Fetch 2+: Harmful - significant crash activity (HIGH risk)
                 print(f"   🔄 Late crash evolving {pool_id}: fetch_count={fetch_count}")
                 
-                evolution_factor = min(fetch_count, 5)  # Cap at 5 fetches
-                crash_probability = 0.0005 + (evolution_factor * 0.004)  # Starts very low, increases significantly
-                
-                # Fetch 0: Normal behavior - no crashes scheduled
+                # Fetch 0: Completely stable - no crashes, override crash_probability to 0
                 if fetch_count == 0:
                     print(f"   ✅ Initial state: {pool_id} will show as NORMAL (LOW risk)")
-                    # Keep default normal parameters - no late crash times added
-                # Fetch 1: Some risk but not harmful yet
+                    crash_probability = 0.0  # FORCE no crashes for initial state
+                    # Keep late_crash_times empty - no crashes scheduled
+                # Fetch 1: Some risk but not harmful yet - minor volatility
                 elif fetch_count == 1:
-                    print(f"   ⚠️ First refetch: {pool_id} showing early warning signs (MEDIUM risk)")
-                    # Schedule 1-2 minor events near the end
-                    test_start = int(num_samples * 0.85)
+                    print(f"   ⚠️ First refetch: {pool_id} showing early warning signs (LOW-MEDIUM risk)")
+                    crash_probability = 0.001  # Very low crash probability
+                    # Schedule 1-2 minor events near the very end (might not trigger)
+                    test_start = int(num_samples * 0.90)  # Only last 10%
                     for c in range(random.randint(1, 2)):
-                        crash_hour = test_start + random.randint(0, num_samples - test_start - 30)
+                        crash_hour = test_start + random.randint(0, num_samples - test_start - 20)
                         late_crash_times.append(crash_hour)
-                # Fetch 2+: Harmful - force late crash behavior
+                # Fetch 2+: Harmful - force significant crash behavior (HIGH risk)
                 else:
                     print(f"   🔴 Fetch #{fetch_count}: {pool_id} becoming HARMFUL (HIGH risk)")
-                    test_start = int(num_samples * (0.9 - (fetch_count - 1) * 0.1))  # Earlier and earlier
-                    test_start = max(int(num_samples * 0.5), test_start)  # Don't go below 50%
-                    num_late_crashes = min(1 + fetch_count, 5)
+                    evolution_factor = min(fetch_count - 1, 4)  # 0-4 based on fetch count
+                    crash_probability = 0.005 + (evolution_factor * 0.003)  # Higher base probability
+                    # Schedule multiple crashes with significant presence in recent data
+                    test_start = int(num_samples * max(0.5, 0.85 - (fetch_count - 2) * 0.1))
+                    num_late_crashes = min(2 + fetch_count, 6)
                     crash_spacing = (num_samples - test_start) // (num_late_crashes + 1)
                     for c in range(num_late_crashes):
                         crash_hour = test_start + (c + 1) * crash_spacing + random.randint(-5, 5)
-                        crash_hour = max(test_start, min(crash_hour, num_samples - 20))
+                        crash_hour = max(test_start, min(crash_hour, num_samples - 15))
                         late_crash_times.append(crash_hour)
                     print(f"   Late crash evolving (fetch #{fetch_count}): crashes at {late_crash_times}")
             
