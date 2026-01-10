@@ -584,23 +584,23 @@ class DataFetcher:
                 # Skip this for critical profile since we set them in the critical block above
                 if risk_profile != 'critical':
                     if regime == 'crash':
-                    # High volume during crash (panic selling)
-                    volume_multiplier = random.uniform(3.0, 7.0)
-                    reserve_imbalance = random.uniform(0.20, 0.50)
-                    volatility = random.uniform(0.10, 0.20)
-                elif regime == 'pre_crash':
-                    # Increasing volume before crash
-                    volume_multiplier = random.uniform(1.5, 3.5)
-                    reserve_imbalance = random.uniform(0.10, 0.30)
-                    volatility = random.uniform(0.05, 0.12)
-                elif regime == 'recovery':
-                    volume_multiplier = random.uniform(1.0, 2.0)
-                    reserve_imbalance = random.uniform(0.05, 0.15)
-                    volatility = random.uniform(0.03, 0.06)
-                else:  # normal
-                    volume_multiplier = random.uniform(0.8, 1.5)
-                    reserve_imbalance = random.uniform(0.02, 0.08)
-                    volatility = random.uniform(0.01, 0.03)
+                        # High volume during crash (panic selling)
+                        volume_multiplier = random.uniform(3.0, 7.0)
+                        reserve_imbalance = random.uniform(0.20, 0.50)
+                        volatility = random.uniform(0.10, 0.20)
+                    elif regime == 'pre_crash':
+                        # Increasing volume before crash
+                        volume_multiplier = random.uniform(1.5, 3.5)
+                        reserve_imbalance = random.uniform(0.10, 0.30)
+                        volatility = random.uniform(0.05, 0.12)
+                    elif regime == 'recovery':
+                        volume_multiplier = random.uniform(1.0, 2.0)
+                        reserve_imbalance = random.uniform(0.05, 0.15)
+                        volatility = random.uniform(0.03, 0.06)
+                    else:  # normal
+                        volume_multiplier = random.uniform(0.8, 1.5)
+                        reserve_imbalance = random.uniform(0.02, 0.08)
+                        volatility = random.uniform(0.01, 0.03)
                 
                 # Generate reserves with imbalance
                 total_reserve = current_tvl
