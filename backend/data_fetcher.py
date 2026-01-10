@@ -445,16 +445,20 @@ class DataFetcher:
                         late_crash_times.append(crash_hour)
                     print(f"   Late crash evolving (fetch #{fetch_count}): crashes at {late_crash_times}")
             
-            # For critical profile: create data that shows ONGOING DECLINE
-            # The key is to have CONTINUOUS DECLINE in the latest data, not already crashed
-            # This ensures the predictive model sees risk of further decline
+            # For critical profile: create data that shows ONGOING DECLINE in RECENT data
+            # The key: the model looks at the LAST 48 hours of data to compute features like
+            # tvl_change_6h and tvl_change_24h. We need these to show SIGNIFICANT DECLINE.
+            # Strategy: Start with a long stable period, then have accelerating decline in the
+            # most recent data (last ~100 hours) so the model sees active crashing behavior.
             if risk_profile == 'critical':
-                regime = 'pre_crash'  # Stay in pre_crash (declining but not crashed)
-                regime_duration = num_samples  # Never exit pre_crash
+                regime = 'normal'  # Start normal, will switch to crash later
+                regime_duration = 0
                 crash_counter = 1
-                # Start from a higher TVL so there's room to decline
-                critical_crash_start_hour = 0  # Start declining from the beginning
-                current_tvl = base_tvl * 1.2  # Start at 120% of base
+                # Start with higher TVL - we'll decline it in the recent data
+                # Start at 150% to have room for significant percentage declines
+                current_tvl = base_tvl * 1.5
+                # Mark when to start the critical decline phase (in the last ~100 hours)
+                critical_decline_start = num_samples - 100  # Last ~100 hours
             
             snapshots = []
             
