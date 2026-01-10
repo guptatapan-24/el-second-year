@@ -328,9 +328,9 @@ class PredictiveModelServer:
             # Compute features
             feature_vector, feature_dict = self.compute_predictive_features(pool_id)
             
-            # Get probability prediction
+            # Get probability prediction from ML model
             prob = float(self.model.predict_proba(feature_vector)[0][1])
-            risk_score = round(prob * 100, 2)
+            ml_risk_score = round(prob * 100, 2)
             
             # Compute SHAP explanations
             top_reasons = self.compute_shap_explanations(feature_vector)
@@ -338,10 +338,38 @@ class PredictiveModelServer:
             # Get early warning score if available
             early_warning_score = feature_dict.get('early_warning_score', None)
             
+            # Enhanced risk scoring: combine ML prediction with feature-based signals
+            # This ensures that extreme feature values result in high risk scores
+            risk_score = ml_risk_score
+            
+            # Feature-based boosters for extreme conditions
+            tvl_change_6h = feature_dict.get('tvl_change_6h', 0)
+            tvl_change_24h = feature_dict.get('tvl_change_24h', 0)
+            tvl_acceleration = feature_dict.get('tvl_acceleration', 0)
+            
+            # Boost 1: Severe TVL decline (>20% in 6h or >50% in 24h)
+            if tvl_change_6h < -0.20 or tvl_change_24h < -0.50:
+                decline_boost = min(30, abs(min(tvl_change_6h, tvl_change_24h)) * 40)
+                risk_score = max(risk_score, 65 + decline_boost)  # Ensure at least HIGH
+            
+            # Boost 2: Accelerating decline (negative acceleration during decline)
+            if tvl_acceleration < -0.05 and (tvl_change_6h < -0.10 or tvl_change_24h < -0.20):
+                accel_boost = min(20, abs(tvl_acceleration) * 200)
+                risk_score = min(100, risk_score + accel_boost)
+            
+            # Boost 3: Very high early warning score (>70)
+            if early_warning_score and early_warning_score > 70:
+                ews_boost = (early_warning_score - 70) * 0.8  # Up to 24 points boost
+                risk_score = max(risk_score, 65 + ews_boost)
+            
+            # Ensure score stays in bounds
+            risk_score = round(max(0, min(100, risk_score)), 2)
+            
             # Build response
             result = {
                 "pool_id": pool_id,
                 "risk_score": risk_score,
+                "ml_probability": ml_risk_score,  # Original ML prediction for reference
                 "risk_level": self.get_risk_level(risk_score),
                 "prediction_horizon": "24h" if 'v2' in self.model_version else "current",
                 "prediction_type": "predictive" if 'v2' in self.model_version else "reactive",
