@@ -560,7 +560,11 @@ class DataFetcher:
                             regime = 'normal'
                 
                 # Ensure TVL doesn't go negative or too low
-                current_tvl = max(current_tvl, base_tvl * 0.05)  # Allow lower floor for crash_prone
+                # For critical pools, allow lower floor since they're always crashing
+                if risk_profile == 'critical':
+                    current_tvl = max(current_tvl, base_tvl * 0.01)  # 1% floor for critical
+                else:
+                    current_tvl = max(current_tvl, base_tvl * 0.05)  # 5% floor for others
                 # Cap TVL growth
                 current_tvl = min(current_tvl, base_tvl * 2.0)
                 
