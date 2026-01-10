@@ -473,30 +473,30 @@ class DataFetcher:
                 # For critical profile: Force crash throughout most of the time series
                 if risk_profile == 'critical':
                     if i < critical_crash_start_hour:
-                        # Early period - pre-crash with warning signs
+                        # Early period - pre-crash with warning signs (declining trend)
                         regime = 'pre_crash'
-                        decline_rate = random.uniform(0.005, 0.015)  # 0.5-1.5% per hour
-                        noise = np.random.normal(0, 0.01)
+                        decline_rate = random.uniform(0.002, 0.008)  # Slower: 0.2-0.8% per hour
+                        noise = np.random.normal(0, 0.008)
                         current_tvl *= (1 - decline_rate + noise)
                         volume_multiplier = random.uniform(1.5, 2.5)
                         reserve_imbalance = random.uniform(0.08, 0.18)
                         volatility = random.uniform(0.04, 0.08)
-                    elif i < critical_crash_start_hour + int(num_samples * 0.2):
-                        # Middle period - accelerating decline
+                    elif i < critical_crash_start_hour + int(num_samples * 0.3):
+                        # Middle period - accelerating decline (most recent data)
                         regime = 'crash'
-                        decline_rate = random.uniform(0.02, 0.04)  # 2-4% per hour
-                        noise = np.random.normal(0, 0.015)
+                        decline_rate = random.uniform(0.008, 0.02)  # 0.8-2% per hour
+                        noise = np.random.normal(0, 0.012)
                         current_tvl *= (1 - decline_rate + noise)
                         volume_multiplier = random.uniform(3.0, 5.0)
                         reserve_imbalance = random.uniform(0.20, 0.35)
                         volatility = random.uniform(0.10, 0.15)
                     else:
-                        # Full crash phase - severe and continuous
+                        # Severe crash phase - continuing decline for latest data
                         regime = 'crash'
-                        crash_rate = random.uniform(0.04, 0.10)  # 4-10% per hour 
-                        noise = np.random.normal(0, 0.02)
+                        crash_rate = random.uniform(0.015, 0.035)  # 1.5-3.5% per hour 
+                        noise = np.random.normal(0, 0.015)
                         current_tvl *= (1 - crash_rate + noise)
-                        current_tvl = max(current_tvl, base_tvl * 0.02)  # 2% floor - very low
+                        # NO floor here - allow continuous decline to show trend
                         volume_multiplier = random.uniform(5.0, 10.0)
                         reserve_imbalance = random.uniform(0.30, 0.55)
                         volatility = random.uniform(0.15, 0.25)
