@@ -574,7 +574,12 @@ class DataFetcher:
                     "volatility_24h": volatility,
                     "leverage_ratio": 1.0,
                     "regime": regime,  # For debugging
+                    "risk_profile": risk_profile,  # Track the risk profile
                 }
+                
+                # Store fetch_count in features for late_crash_evolving pools
+                if risk_profile == 'late_crash_evolving' and fetch_count_override is not None:
+                    features['fetch_count'] = fetch_count_override
                 
                 snapshot = Snapshot(
                     snapshot_id=f"synthetic-{pool_id}-{i}",
