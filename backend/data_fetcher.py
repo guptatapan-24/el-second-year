@@ -282,17 +282,25 @@ class DataFetcher:
             ('late_crash_pool_3', 720, 'late_crash_evolving', False),
         ]
         
-        # Increment fetch count for all evolving pools before regeneration
+        # Get fetch counts for evolving pools BEFORE we delete their data
+        # This ensures we know how many times data has been fetched
+        fetch_counts = {}
         db = SessionLocal()
         try:
             for pool_id, _, risk_profile, _ in synthetic_configs:
                 if risk_profile == 'late_crash_evolving':
-                    self._increment_fetch_count(pool_id, db)
+                    current_count = self._get_fetch_count_for_pool(pool_id, db)
+                    # Increment for this fetch
+                    fetch_counts[pool_id] = current_count + 1
+                    print(f"   📈 {pool_id}: fetch count advancing to {fetch_counts[pool_id]}")
         finally:
             db.close()
         
         for pool_id, num_samples, risk_profile, force_current_risk_state in synthetic_configs:
-            self.generate_predictive_synthetic_data(pool_id, num_samples, risk_profile, force_current_risk_state)
+            # Pass the pre-computed fetch count for evolving pools
+            fetch_count_override = fetch_counts.get(pool_id, None)
+            self.generate_predictive_synthetic_data(pool_id, num_samples, risk_profile, 
+                                                    force_current_risk_state, fetch_count_override)
         
         print("\n" + "="*70)
         print("✅ SYNTHETIC POOLS REGENERATED")
