@@ -92,6 +92,11 @@ class RiskScheduler:
             logger.info("🔄 Fetching protocol data...")
             snapshot_ids = self.data_fetcher.fetch_all_protocols()
             logger.info(f"✅ Fetched {len(snapshot_ids)} protocols")
+            
+            # Also regenerate synthetic pools to add variation
+            logger.info("🔄 Regenerating synthetic pools...")
+            self.data_fetcher.regenerate_synthetic_pools()
+            
             return snapshot_ids
         except Exception as e:
             logger.error(f"❌ Fetch failed: {e}")
