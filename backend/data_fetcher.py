@@ -441,13 +441,15 @@ class DataFetcher:
                         late_crash_times.append(crash_hour)
                     print(f"   Late crash evolving (fetch #{fetch_count}): crashes at {late_crash_times}")
             
-            # For critical profile, start in crash regime immediately
+            # For critical profile: create data that shows ONGOING crash in recent history
+            # The prediction window is 48 hours, so we need crash patterns in the LAST 48 hours
             if risk_profile == 'critical':
-                regime = 'crash'
-                regime_duration = num_samples  # Stay in crash the entire time
-                crash_counter = 1
-                # Start with severely reduced TVL
-                current_tvl = base_tvl * 0.3
+                regime = 'normal'  # Start normal, transition to crash near the end
+                regime_duration = 0
+                crash_counter = 0
+                # Will force crash to happen in the last 48-72 hours so predictions detect it
+                critical_crash_start_hour = num_samples - 72  # Start crash 72 hours before end
+                current_tvl = base_tvl * 0.8  # Start at 80% of base
             
             snapshots = []
             
