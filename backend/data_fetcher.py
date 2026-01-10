@@ -471,36 +471,33 @@ class DataFetcher:
                     regime = 'pre_crash'
                     regime_duration = random.randint(8, 20)
                 
-                # For critical profile: Force crash throughout most of the time series
+                # For critical profile: Show CONTINUOUS DECLINE to predict HIGH future risk
+                # The model predicts future crashes, so we need ONGOING decline, not already crashed
                 if risk_profile == 'critical':
-                    if i < critical_crash_start_hour:
-                        # Early period - pre-crash with warning signs (declining trend)
+                    # Calculate position in time series (0 to 1)
+                    progress = i / num_samples
+                    
+                    if progress < 0.7:
+                        # First 70%: gradual decline with acceleration
                         regime = 'pre_crash'
-                        decline_rate = random.uniform(0.002, 0.008)  # Slower: 0.2-0.8% per hour
+                        # Decline rate increases over time
+                        base_decline = 0.003 + (progress * 0.005)  # 0.3% to 0.8% per hour
+                        decline_rate = random.uniform(base_decline * 0.8, base_decline * 1.2)
                         noise = np.random.normal(0, 0.008)
                         current_tvl *= (1 - decline_rate + noise)
-                        volume_multiplier = random.uniform(1.5, 2.5)
-                        reserve_imbalance = random.uniform(0.08, 0.18)
-                        volatility = random.uniform(0.04, 0.08)
-                    elif i < critical_crash_start_hour + int(num_samples * 0.3):
-                        # Middle period - accelerating decline (most recent data)
+                        volume_multiplier = random.uniform(1.5, 2.5 + progress)  # Increasing volume
+                        reserve_imbalance = random.uniform(0.05 + progress * 0.15, 0.10 + progress * 0.20)
+                        volatility = random.uniform(0.03 + progress * 0.04, 0.06 + progress * 0.06)
+                    else:
+                        # Last 30%: accelerating crash with high volatility
                         regime = 'crash'
-                        decline_rate = random.uniform(0.008, 0.02)  # 0.8-2% per hour
+                        # Much faster decline in recent data
+                        decline_rate = random.uniform(0.012, 0.025)  # 1.2% to 2.5% per hour
                         noise = np.random.normal(0, 0.012)
                         current_tvl *= (1 - decline_rate + noise)
-                        volume_multiplier = random.uniform(3.0, 5.0)
-                        reserve_imbalance = random.uniform(0.20, 0.35)
-                        volatility = random.uniform(0.10, 0.15)
-                    else:
-                        # Severe crash phase - continuing decline for latest data
-                        regime = 'crash'
-                        crash_rate = random.uniform(0.015, 0.035)  # 1.5-3.5% per hour 
-                        noise = np.random.normal(0, 0.015)
-                        current_tvl *= (1 - crash_rate + noise)
-                        # NO floor here - allow continuous decline to show trend
-                        volume_multiplier = random.uniform(5.0, 10.0)
-                        reserve_imbalance = random.uniform(0.30, 0.55)
-                        volatility = random.uniform(0.15, 0.25)
+                        volume_multiplier = random.uniform(4.0, 8.0)
+                        reserve_imbalance = random.uniform(0.25, 0.45)
+                        volatility = random.uniform(0.12, 0.22)
                         crash_counter = 1
                 else:
                     # Force crash state near the end for crash_prone pools
