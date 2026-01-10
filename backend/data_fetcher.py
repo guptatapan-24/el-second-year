@@ -400,19 +400,40 @@ class DataFetcher:
             
             # For late_crash_evolving profile - calculate based on fetch count
             # The more times data is fetched, the more likely to be in crash state
-            fetch_count = self._get_fetch_count_for_pool(pool_id, db)
+            # Use fetch_count_override if provided (pre-computed before data was cleared)
+            if fetch_count_override is not None:
+                fetch_count = fetch_count_override
+            else:
+                fetch_count = self._get_fetch_count_for_pool(pool_id, db)
+            
             if risk_profile == 'late_crash_evolving':
                 # Evolution: each fetch increases crash probability
-                # Fetch 0 (initial): Normal
-                # Fetch 1+: Increasing crash probability
-                evolution_factor = min(fetch_count, 5)  # Cap at 5 fetches
-                crash_probability = 0.0008 + (evolution_factor * 0.003)  # Increases significantly
+                # Fetch 0 (initial): Completely normal - LOW risk
+                # Fetch 1: Slightly elevated - still mostly LOW/MEDIUM
+                # Fetch 2+: Increasing crash probability - becomes harmful (HIGH risk)
+                print(f"   🔄 Late crash evolving {pool_id}: fetch_count={fetch_count}")
                 
-                # After 2+ fetches, force late crash behavior
-                if fetch_count >= 2:
-                    test_start = int(num_samples * (0.9 - fetch_count * 0.1))  # Earlier and earlier
+                evolution_factor = min(fetch_count, 5)  # Cap at 5 fetches
+                crash_probability = 0.0005 + (evolution_factor * 0.004)  # Starts very low, increases significantly
+                
+                # Fetch 0: Normal behavior - no crashes scheduled
+                if fetch_count == 0:
+                    print(f"   ✅ Initial state: {pool_id} will show as NORMAL (LOW risk)")
+                    # Keep default normal parameters - no late crash times added
+                # Fetch 1: Some risk but not harmful yet
+                elif fetch_count == 1:
+                    print(f"   ⚠️ First refetch: {pool_id} showing early warning signs (MEDIUM risk)")
+                    # Schedule 1-2 minor events near the end
+                    test_start = int(num_samples * 0.85)
+                    for c in range(random.randint(1, 2)):
+                        crash_hour = test_start + random.randint(0, num_samples - test_start - 30)
+                        late_crash_times.append(crash_hour)
+                # Fetch 2+: Harmful - force late crash behavior
+                else:
+                    print(f"   🔴 Fetch #{fetch_count}: {pool_id} becoming HARMFUL (HIGH risk)")
+                    test_start = int(num_samples * (0.9 - (fetch_count - 1) * 0.1))  # Earlier and earlier
                     test_start = max(int(num_samples * 0.5), test_start)  # Don't go below 50%
-                    num_late_crashes = min(2 + fetch_count, 5)
+                    num_late_crashes = min(1 + fetch_count, 5)
                     crash_spacing = (num_samples - test_start) // (num_late_crashes + 1)
                     for c in range(num_late_crashes):
                         crash_hour = test_start + (c + 1) * crash_spacing + random.randint(-5, 5)
