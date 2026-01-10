@@ -237,7 +237,30 @@ def get_risk_summary():
     - Count of pools by risk level
     - Total active alerts
     - Per-pool summary with TVL
+    
+    Filters to only show the 28 expected protocols.
     """
+    # Expected pool_id prefixes for the 28 protocols
+    EXPECTED_POOL_PREFIXES = [
+        # Real DeFi protocols (18 pools)
+        'uniswap_v2_',    # 4 pools
+        'uniswap_v3_',    # 3 pools
+        'aave_v3_',       # 4 pools
+        'compound_v2_',   # 4 pools
+        'curve_',         # 3 pools
+        # Synthetic pools for training (10 pools)
+        'synthetic_',     # 5 pools
+        'high_risk_pool',
+        'critical_risk_pool',
+        'late_crash_pool_',  # 3 pools
+    ]
+    
+    def is_expected_pool(pool_id: str) -> bool:
+        for prefix in EXPECTED_POOL_PREFIXES:
+            if pool_id.startswith(prefix) or pool_id == prefix.rstrip('_'):
+                return True
+        return False
+    
     db = SessionLocal()
     try:
         # Get latest risk for each pool using subquery
@@ -263,6 +286,9 @@ def get_risk_summary():
             .all()
         )
         
+        # Filter to expected pools
+        latest_risks = [r for r in latest_risks if is_expected_pool(r.pool_id)]
+        
         # Get latest TVL for each pool from Snapshot table
         tvl_subq = (
             db.query(
@@ -283,8 +309,8 @@ def get_risk_summary():
             .all()
         )
         
-        # Create TVL lookup map
-        tvl_by_pool = {s.pool_id: s.tvl or 0 for s in latest_snapshots}
+        # Create TVL lookup map (filtered)
+        tvl_by_pool = {s.pool_id: s.tvl or 0 for s in latest_snapshots if is_expected_pool(s.pool_id)}
         
         # Count by risk level
         high_count = sum(1 for r in latest_risks if r.risk_level == 'HIGH')
@@ -298,7 +324,7 @@ def get_risk_summary():
             .group_by(Alert.pool_id)
             .all()
         )
-        alert_by_pool = {p: c for p, c in alert_counts}
+        alert_by_pool = {p: c for p, c in alert_counts if is_expected_pool(p)}
         
         total_alerts = sum(alert_by_pool.values())
         

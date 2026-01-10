@@ -35,8 +35,26 @@ def update_status(phase: str, progress: int, error: str = None, completed: bool 
 @router.get("")
 def get_protocols():
     """
-    Return ONLY the latest snapshot per pool_id
+    Return ONLY the latest snapshot per pool_id.
+    Filters to show only the 28 expected protocols:
+    - 18 real DeFi protocol pools (from fetch_real_protocols.py)
+    - 10 synthetic pools for ML training (from data_fetcher.py --predictive)
     """
+    # Expected pool_id prefixes for the 28 protocols
+    EXPECTED_POOL_PREFIXES = [
+        # Real DeFi protocols (18 pools)
+        'uniswap_v2_',    # 4 pools
+        'uniswap_v3_',    # 3 pools
+        'aave_v3_',       # 4 pools
+        'compound_v2_',   # 4 pools
+        'curve_',         # 3 pools
+        # Synthetic pools for training (10 pools)
+        'synthetic_',     # 5 pools
+        'high_risk_pool',
+        'critical_risk_pool',
+        'late_crash_pool_',  # 3 pools
+    ]
+    
     db = SessionLocal()
     try:
         # Subquery: latest timestamp per pool
@@ -61,6 +79,15 @@ def get_protocols():
             .all()
         )
 
+        # Filter to only expected protocols
+        def is_expected_pool(pool_id: str) -> bool:
+            for prefix in EXPECTED_POOL_PREFIXES:
+                if pool_id.startswith(prefix) or pool_id == prefix.rstrip('_'):
+                    return True
+            return False
+
+        filtered_rows = [r for r in rows if is_expected_pool(r.pool_id)]
+
         return [
             {
                 "pool_id": r.pool_id,
@@ -71,7 +98,7 @@ def get_protocols():
                 "last_update": r.timestamp.isoformat(),
                 "data_source": r.source,
             }
-            for r in rows
+            for r in filtered_rows
         ]
     finally:
         db.close()
@@ -129,7 +156,15 @@ def get_data_status():
 
 
 def run_full_initialization(days: int = 30):
-    """Background task to fetch history, train model, and run predictions"""
+    """
+    Background task to initialize the system with data and train model.
+    
+    Sequence (per user requirement):
+    1. First run data_fetcher.py --predictive (generates synthetic training data)
+    2. Then run fetch_real_protocols.py --fetch-history --days 30 (fetches real DeFi data)
+    3. Then train the model with model_trainer.py
+    4. Run predictions and generate alerts
+    """
     global _init_status
     
     with _status_lock:
@@ -141,9 +176,28 @@ def run_full_initialization(days: int = 30):
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     try:
-        # Phase 1: Fetch historical data from DeFiLlama
-        update_status("Fetching 30-day historical data from DeFiLlama...", 10)
-        logger.info("🌐 Starting historical data fetch...")
+        # Phase 1: Generate predictive synthetic data for model training
+        update_status("Generating predictive synthetic data...", 5)
+        logger.info("📊 Phase 1: Generating predictive synthetic data...")
+        
+        result = subprocess.run(
+            [sys.executable, "data_fetcher.py", "--predictive"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Synthetic data generation failed: {result.stderr}")
+            update_status("Synthetic data generation failed", 5, error=result.stderr[:500])
+            return
+        
+        logger.info("✅ Predictive synthetic data generated")
+        update_status("Fetching real historical data from DeFiLlama...", 20)
+        
+        # Phase 2: Fetch real historical data from DeFiLlama
+        logger.info("🌐 Phase 2: Fetching real historical data...")
         
         result = subprocess.run(
             [sys.executable, "fetch_real_protocols.py", "--fetch-history", "--days", str(days)],
@@ -155,14 +209,14 @@ def run_full_initialization(days: int = 30):
         
         if result.returncode != 0:
             logger.error(f"Fetch failed: {result.stderr}")
-            update_status("Data fetch failed", 10, error=result.stderr[:500])
+            update_status("Data fetch failed", 20, error=result.stderr[:500])
             return
         
         logger.info("✅ Historical data fetched successfully")
-        update_status("Historical data fetched. Training ML model...", 40)
+        update_status("Training ML model...", 50)
         
-        # Phase 2: Train the model
-        logger.info("🧠 Starting model training...")
+        # Phase 3: Train the model
+        logger.info("🧠 Phase 3: Training ML model...")
         
         result = subprocess.run(
             [sys.executable, "model_trainer.py"],
@@ -174,14 +228,14 @@ def run_full_initialization(days: int = 30):
         
         if result.returncode != 0:
             logger.error(f"Training failed: {result.stderr}")
-            update_status("Model training failed", 40, error=result.stderr[:500])
+            update_status("Model training failed", 50, error=result.stderr[:500])
             return
         
         logger.info("✅ Model trained successfully")
-        update_status("Model trained. Running risk predictions...", 70)
+        update_status("Running risk predictions...", 75)
         
-        # Phase 3: Run predictions for all pools
-        logger.info("📊 Running predictions for all pools...")
+        # Phase 4: Run predictions for all pools
+        logger.info("📊 Phase 4: Running predictions for all pools...")
         
         # Import risk evaluator to run predictions
         from services.risk_evaluator import get_risk_evaluator
@@ -191,7 +245,9 @@ def run_full_initialization(days: int = 30):
         results = evaluator.predict_all_pools()
         logger.info(f"✅ Predicted risk for {len(results)} pools")
         
-        # Evaluate alerts
+        update_status("Generating alerts...", 90)
+        
+        # Phase 5: Evaluate alerts
         alerts = evaluator.evaluate_all_alerts()
         logger.info(f"✅ Generated {len(alerts)} alerts")
         
