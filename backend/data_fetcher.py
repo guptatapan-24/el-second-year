@@ -324,6 +324,7 @@ class DataFetcher:
             num_samples: Number of hourly snapshots (default 720 = 30 days)
             risk_profile: 'safe', 'risky', 'mixed', 'crash_prone', 'critical', 'late_crash_evolving'
             force_current_risk_state: If True, ensures pool ends in pre_crash/crash state
+            fetch_count_override: Pre-computed fetch count for late_crash_evolving pools
         """
         import numpy as np
         
