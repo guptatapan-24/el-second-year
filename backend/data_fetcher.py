@@ -195,6 +195,41 @@ class DataFetcher:
         finally:
             db.close()
     
+    def _get_fetch_count_for_pool(self, pool_id: str, db) -> int:
+        """
+        Get the approximate fetch count based on stored metadata.
+        Uses a simple metadata table or count of distinct fetch batches.
+        """
+        try:
+            # Count distinct snapshot batches by source timestamp prefix
+            from sqlalchemy import func
+            
+            # Check if pool has fetch history in features
+            latest_snapshot = db.query(Snapshot).filter(
+                Snapshot.pool_id == pool_id
+            ).order_by(Snapshot.timestamp.desc()).first()
+            
+            if latest_snapshot and latest_snapshot.features:
+                return latest_snapshot.features.get('fetch_count', 0)
+            return 0
+        except Exception:
+            return 0
+    
+    def _increment_fetch_count(self, pool_id: str, db):
+        """Increment the fetch count for a pool in the latest snapshot."""
+        try:
+            latest_snapshot = db.query(Snapshot).filter(
+                Snapshot.pool_id == pool_id
+            ).order_by(Snapshot.timestamp.desc()).first()
+            
+            if latest_snapshot:
+                features = latest_snapshot.features or {}
+                features['fetch_count'] = features.get('fetch_count', 0) + 1
+                latest_snapshot.features = features
+                db.commit()
+        except Exception as e:
+            print(f"Error incrementing fetch count: {e}")
+    
     def generate_synthetic_data(self, pool_id: str, num_samples: int = 300):
         """Legacy method - use generate_predictive_synthetic_data instead"""
         return self.generate_predictive_synthetic_data(pool_id, num_samples)
