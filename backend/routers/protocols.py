@@ -40,20 +40,44 @@ def get_protocols():
     - 18 real DeFi protocol pools (from fetch_real_protocols.py)
     - 10 synthetic pools for ML training (from data_fetcher.py --predictive)
     """
-    # Expected pool_id prefixes for the 28 protocols
-    EXPECTED_POOL_PREFIXES = [
+    # Exact pool IDs expected (28 total)
+    EXPECTED_POOL_IDS = {
         # Real DeFi protocols (18 pools)
-        'uniswap_v2_',    # 4 pools
-        'uniswap_v3_',    # 3 pools
-        'aave_v3_',       # 4 pools
-        'compound_v2_',   # 4 pools
-        'curve_',         # 3 pools
+        # Uniswap V2 (4)
+        'uniswap_v2_usdc_eth',
+        'uniswap_v2_dai_eth',
+        'uniswap_v2_usdt_eth',
+        'uniswap_v2_wbtc_eth',
+        # Uniswap V3 (3)
+        'uniswap_v3_usdc_eth_0.3pct',
+        'uniswap_v3_usdc_eth_0.05pct',
+        'uniswap_v3_dai_usdc_0.01pct',
+        # Aave V3 (4)
+        'aave_v3_eth',
+        'aave_v3_usdc',
+        'aave_v3_dai',
+        'aave_v3_wbtc',
+        # Compound V2 (4)
+        'compound_v2_eth',
+        'compound_v2_usdc',
+        'compound_v2_dai',
+        'compound_v2_usdt',
+        # Curve (3)
+        'curve_3pool',
+        'curve_steth',
+        'curve_frax',
         # Synthetic pools for training (10 pools)
-        'synthetic_',     # 5 pools
+        'synthetic_pool_1',
+        'synthetic_pool_2',
+        'synthetic_uniswap_v2',
+        'synthetic_aave_v3',
+        'synthetic_curve',
         'high_risk_pool',
         'critical_risk_pool',
-        'late_crash_pool_',  # 3 pools
-    ]
+        'late_crash_pool_1',
+        'late_crash_pool_2',
+        'late_crash_pool_3',
+    }
     
     db = SessionLocal()
     try:
@@ -79,14 +103,8 @@ def get_protocols():
             .all()
         )
 
-        # Filter to only expected protocols
-        def is_expected_pool(pool_id: str) -> bool:
-            for prefix in EXPECTED_POOL_PREFIXES:
-                if pool_id.startswith(prefix) or pool_id == prefix.rstrip('_'):
-                    return True
-            return False
-
-        filtered_rows = [r for r in rows if is_expected_pool(r.pool_id)]
+        # Filter to only expected protocols - exact match
+        filtered_rows = [r for r in rows if r.pool_id in EXPECTED_POOL_IDS]
 
         return [
             {
