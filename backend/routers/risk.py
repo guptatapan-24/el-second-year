@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.risk_evaluator import RiskEvaluator, get_risk_evaluator
 from services.simulation_service import get_simulation_service
+from services.explainability_service import enhance_risk_response_with_explainability
 from database import SessionLocal
 from db_models.risk_history import RiskHistory
 from db_models.alert import Alert
@@ -42,6 +43,14 @@ class ReasonResponse(BaseModel):
     impact: float
     direction: str
     explanation: Optional[str] = None
+    readable_name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ExplainabilityResponse(BaseModel):
+    summary: str
+    top_factors: List[str]
+    risk_direction_hint: str
 
 
 class LatestRiskResponse(BaseModel):
@@ -53,6 +62,11 @@ class LatestRiskResponse(BaseModel):
     model_version: Optional[str]
     prediction_horizon: Optional[str]
     timestamp: str
+    # Phase 6: Explainability additions
+    confidence: Optional[str] = None
+    confidence_reason: Optional[str] = None
+    explainability: Optional[ExplainabilityResponse] = None
+    enhanced_top_reasons: Optional[List[Dict]] = None
 
 
 class RiskHistoryItemResponse(BaseModel):
@@ -121,6 +135,8 @@ def get_latest_risk(pool_id: str):
     - risk_level: LOW (<30), MEDIUM (30-65), HIGH (>65)
     - early_warning_score: Composite early warning signal
     - top_reasons: Top 3 SHAP-based contributing features
+    - confidence: HIGH/MEDIUM/LOW prediction confidence
+    - explainability: Natural language explanation of risk factors
     """
     evaluator = get_risk_evaluator()
     result = evaluator.get_latest_risk(pool_id)
@@ -131,15 +147,30 @@ def get_latest_risk(pool_id: str):
             detail=f"No risk data found for pool: {pool_id}"
         )
     
+    # Enhance with explainability (Phase 6)
+    enhanced_result = enhance_risk_response_with_explainability(result)
+    
+    # Build explainability response
+    explainability_data = enhanced_result.get('explainability', {})
+    explainability_response = ExplainabilityResponse(
+        summary=explainability_data.get('summary', ''),
+        top_factors=explainability_data.get('top_factors', []),
+        risk_direction_hint=explainability_data.get('risk_direction_hint', '')
+    ) if explainability_data else None
+    
     return LatestRiskResponse(
-        pool_id=result['pool_id'],
-        risk_score=result['risk_score'],
-        risk_level=result['risk_level'],
-        early_warning_score=result['early_warning_score'],
-        top_reasons=result['top_reasons'] or [],
-        model_version=result['model_version'],
-        prediction_horizon=result['prediction_horizon'],
-        timestamp=result['timestamp']
+        pool_id=enhanced_result['pool_id'],
+        risk_score=enhanced_result['risk_score'],
+        risk_level=enhanced_result['risk_level'],
+        early_warning_score=enhanced_result.get('early_warning_score'),
+        top_reasons=enhanced_result.get('top_reasons') or [],
+        model_version=enhanced_result.get('model_version'),
+        prediction_horizon=enhanced_result.get('prediction_horizon'),
+        timestamp=enhanced_result['timestamp'],
+        confidence=enhanced_result.get('confidence'),
+        confidence_reason=enhanced_result.get('confidence_reason'),
+        explainability=explainability_response,
+        enhanced_top_reasons=enhanced_result.get('enhanced_top_reasons')
     )
 
 

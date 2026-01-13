@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 from datetime import datetime
-from routers import protocols_router, submissions_router, timeseries_router, risk_router
+from routers import protocols_router, submissions_router, timeseries_router, risk_router, model_info_router
 
 from model_server import PredictiveModelServer as ModelServer
 from signer import PayloadSigner
@@ -27,6 +27,7 @@ app.include_router(protocols_router, prefix="/api")
 app.include_router(submissions_router, prefix="/api")
 app.include_router(timeseries_router, prefix="/api")
 app.include_router(risk_router, prefix="/api")
+app.include_router(model_info_router, prefix="/api")
 
 # CORS
 app.add_middleware(
@@ -265,6 +266,3 @@ async def get_snapshots(pool_id: Optional[str] = None, limit: int = 50):
         ]
     finally:
         db.close()
-
-
-
