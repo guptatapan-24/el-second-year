@@ -286,17 +286,23 @@ class RiskEvaluator:
                 alerts.append(alert)
         
         # 2. EARLY_WARNING_ALERT
+        # Only generate early warning if:
+        # - early_warning_score >= threshold (40)
+        # - AND risk_score is not LOW (>= 20) to avoid false positives for stable protocols
+        # This prevents alerts for protocols that are stable but have neutral EWS baseline
         if early_warning and early_warning >= ALERT_THRESHOLDS['early_warning_score']:
-            if not self.has_recent_alert(pool_id, AlertType.EARLY_WARNING_ALERT.value):
-                alert = self.create_alert(
-                    pool_id=pool_id,
-                    alert_type=AlertType.EARLY_WARNING_ALERT.value,
-                    risk_score=risk_score,
-                    risk_level=risk_level,
-                    message=f"Early warning signal for {pool_id}. EWS: {early_warning:.1f}. Potential risk escalation.",
-                    top_reasons=top_reasons
-                )
-                alerts.append(alert)
+            # Additional check: Don't alert for very low risk scores (stable protocols)
+            if risk_score >= 20:  # Only alert if risk_score indicates some concern
+                if not self.has_recent_alert(pool_id, AlertType.EARLY_WARNING_ALERT.value):
+                    alert = self.create_alert(
+                        pool_id=pool_id,
+                        alert_type=AlertType.EARLY_WARNING_ALERT.value,
+                        risk_score=risk_score,
+                        risk_level=risk_level,
+                        message=f"Early warning signal for {pool_id}. EWS: {early_warning:.1f}. Potential risk escalation.",
+                        top_reasons=top_reasons
+                    )
+                    alerts.append(alert)
         
         # 3. RISK_ESCALATION_ALERT
         if previous:

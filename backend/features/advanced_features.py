@@ -82,7 +82,7 @@ class PredictiveFeatures:
             'volatility_6h': self.volatility_6h or 0.0,
             'volatility_24h': self.volatility_24h or 0.0,
             'volatility_ratio': self.volatility_ratio or 1.0,
-            'early_warning_score': self.early_warning_score or 50.0,
+            'early_warning_score': self.early_warning_score or 20.0,  # Default to baseline (20)
         }
     
     def get_feature_vector(self) -> List[float]:
@@ -254,6 +254,13 @@ class AdvancedFeatureEngine:
         
         Higher score = higher risk of future TVL crash.
         
+        Score scale:
+        - 0-20: Very safe (stable or growing)
+        - 20-40: Normal (minor fluctuations)
+        - 40-60: Elevated concern (notable negative trends)
+        - 60-80: High warning (significant decline patterns)
+        - 80-100: Critical (severe crash indicators)
+        
         Components:
         - Negative TVL changes increase score
         - Negative acceleration (accelerating outflows) increases score
@@ -261,23 +268,27 @@ class AdvancedFeatureEngine:
         - Increasing reserve imbalance increases score
         - High volatility ratio increases score
         """
-        score = pd.Series(50.0, index=df.index)  # Start at neutral 50
+        # Start at 20 (baseline for stable protocol with no changes)
+        # This means stable protocols won't trigger early warning alerts (threshold = 40)
+        score = pd.Series(20.0, index=df.index)
         
         # TVL Change 6h: negative change = higher risk
-        # Scale: -20% change -> +20 points
+        # Scale: -20% change -> +15 points (0.15 weight * 100)
         tvl_6h_component = -df['tvl_change_6h'] * 100 * self.EWS_WEIGHTS['tvl_change_6h']
         score += tvl_6h_component.fillna(0)
         
         # TVL Change 24h: negative change = higher risk
+        # Scale: -30% change -> +20 points (0.20 weight * 100)
         tvl_24h_component = -df['tvl_change_24h'] * 100 * self.EWS_WEIGHTS['tvl_change_24h']
         score += tvl_24h_component.fillna(0)
         
         # TVL Acceleration: negative = accelerating outflows = higher risk
+        # Scale: -0.10 acceleration -> +20 points
         accel_component = -df['tvl_acceleration'] * 100 * self.EWS_WEIGHTS['tvl_acceleration']
         score += accel_component.fillna(0)
         
         # Volume Spike: high spike = potential panic = higher risk
-        # Spike > 2x adds risk
+        # Spike > 1x normal adds risk (spike of 3x -> +3 points with 0.15 weight)
         volume_component = (df['volume_spike_ratio'] - 1.0).clip(0) * 10 * self.EWS_WEIGHTS['volume_spike_ratio']
         score += volume_component.fillna(0)
         
@@ -286,7 +297,7 @@ class AdvancedFeatureEngine:
         score += imbalance_component.fillna(0)
         
         # Volatility Ratio: high ratio = regime change = higher risk
-        # Ratio > 1.5 adds risk
+        # Ratio > 1.0 adds risk (ratio of 2.0 -> +2 points with 0.20 weight)
         vol_component = (df['volatility_ratio'] - 1.0).clip(0) * 10 * self.EWS_WEIGHTS['volatility_ratio']
         score += vol_component.fillna(0)
         
