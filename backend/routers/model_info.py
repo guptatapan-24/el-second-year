@@ -191,13 +191,14 @@ def get_model_info():
     
     # Get metrics
     metrics = metadata.get('metrics', {})
+    auc_score=metrics.get('auc') or metrics.get('roc_auc')
     
     return ModelInfoResponse(
         model_name=metadata.get('model_name', 'xgb_veririsk_v1'),
         model_type=metadata.get('model_type', 'XGBoost Classifier'),
         training_date=metadata.get('train_date', datetime.utcnow().isoformat()),
         features_used=features_used,
-        auc_score=metrics.get('auc'),
+        auc_score=auc_score,
         training_samples=metrics.get('n_train', 0) + metrics.get('n_test', 0),
         last_retrained=metadata.get('train_date', datetime.utcnow().isoformat()),
         hyperparameters=metadata.get('hyperparameters', {}),
