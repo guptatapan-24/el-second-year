@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { AlertTriangle, CheckCircle, Filter, RefreshCw, Bell, BellOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Filter, RefreshCw, Bell, BellOff, Zap } from 'lucide-react';
 import AlertFeed from '../components/AlertFeed';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorFallback from '../components/ErrorFallback';
@@ -51,14 +51,16 @@ export default function Alerts() {
       (a) => new Date(a.created_at).toDateString() === new Date().toDateString()
     ).length;
     const escalations = alerts.filter((a) => a.alert_type === 'RISK_ESCALATION_ALERT').length;
+    const riskSpikes = alerts.filter((a) => a.alert_type === 'RISK_SPIKE').length;
 
-    return { active, highRisk, today, escalations };
+    return { active, highRisk, today, escalations, riskSpikes };
   }, [alerts]);
 
   // Alert types for filter
   const alertTypes = [
     { value: 'all', label: 'All Types' },
     { value: 'HIGH_RISK_ALERT', label: 'High Risk' },
+    { value: 'RISK_SPIKE', label: 'Risk Spike' },
     { value: 'EARLY_WARNING_ALERT', label: 'Early Warning' },
     { value: 'RISK_ESCALATION_ALERT', label: 'Escalation' },
   ];
@@ -95,7 +97,7 @@ export default function Alerts() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,11 +126,25 @@ export default function Alerts() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="glass-card p-5"
+          data-testid="risk-spikes-stat"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-defi-primary" />
+            <span className="text-sm text-gray-400">Risk Spikes</span>
+          </div>
+          <AnimatedCounter value={stats.riskSpikes} className="text-2xl font-bold text-defi-primary" />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="glass-card p-5"
         >
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-4 h-4 text-defi-primary" />
+            <CheckCircle className="w-4 h-4 text-risk-low" />
             <span className="text-sm text-gray-400">Today</span>
           </div>
           <AnimatedCounter value={stats.today} className="text-2xl font-bold text-white" />
@@ -137,7 +153,7 @@ export default function Alerts() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.25 }}
           className="glass-card p-5"
         >
           <div className="flex items-center gap-2 mb-2">
@@ -173,19 +189,24 @@ export default function Alerts() {
           </div>
 
           {/* Type Filter */}
-          <div className="flex gap-2 md:ml-auto">
+          <div className="flex gap-2 md:ml-auto flex-wrap">
             <span className="text-sm text-gray-500 self-center mr-2">Type:</span>
             {alertTypes.map((type) => (
               <button
                 key={type.value}
                 onClick={() => setTypeFilter(type.value)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   typeFilter === type.value
-                    ? 'bg-defi-secondary text-white'
-                    : 'bg-dark-700 text-gray-400 hover:text-white'
+                    ? type.value === 'RISK_SPIKE' 
+                      ? 'bg-defi-primary text-white shadow-glow-cyan' 
+                      : 'bg-defi-secondary text-white'
+                    : type.value === 'RISK_SPIKE'
+                      ? 'bg-dark-700 text-defi-primary hover:bg-defi-primary/10 border border-defi-primary/30'
+                      : 'bg-dark-700 text-gray-400 hover:text-white'
                 }`}
                 data-testid={`filter-type-${type.value}`}
               >
+                {type.value === 'RISK_SPIKE' && <Zap className="w-3 h-3" />}
                 {type.label}
               </button>
             ))}

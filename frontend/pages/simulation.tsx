@@ -530,9 +530,10 @@ export default function Simulation() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
+                data-testid="simulation-results"
               >
                 {/* Risk Change Visualization */}
-                <div className="glass-card p-6 overflow-hidden relative">
+                <div className="glass-card p-6 overflow-hidden relative" data-testid="risk-comparison-panel">
                   {/* Background glow effect */}
                   <div className={`absolute inset-0 opacity-20 blur-3xl ${
                     simulationResult.risk_increased ? 'bg-risk-high' : 'bg-risk-low'
@@ -545,13 +546,14 @@ export default function Simulation() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center relative z-10">
                     {/* Before (Actual) */}
-                    <div className="text-center p-4 rounded-xl bg-dark-800/50 border border-white/5">
+                    <div className="text-center p-4 rounded-xl bg-dark-800/50 border border-white/5" data-testid="actual-risk">
                       <div className="text-sm text-gray-500 mb-3 flex items-center justify-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-gray-500" />
                         Current State
                       </div>
                       <div
                         className={`text-5xl font-bold ${getRiskColor(simulationResult.actual_risk.level)}`}
+                        data-testid="actual-risk-score"
                       >
                         {simulationResult.actual_risk.score.toFixed(1)}
                       </div>
@@ -642,13 +644,19 @@ export default function Simulation() {
 
                       {simulationResult.delta >= 30 && (
                         <motion.div
-                          initial={{ x: -20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-defi-secondary/10 text-defi-secondary border border-defi-secondary/30"
+                          initial={{ x: -20, opacity: 0, scale: 0.9 }}
+                          animate={{ x: 0, opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.2, type: "spring" }}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-defi-primary/10 text-defi-primary border border-defi-primary/30 shadow-glow-cyan"
                         >
-                          <Zap className="w-4 h-4" />
-                          <span className="font-medium">RISK_SPIKE Detected</span>
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                          >
+                            <Zap className="w-5 h-5" />
+                          </motion.div>
+                          <span className="font-semibold">⚡ RISK_SPIKE Detected</span>
+                          <span className="text-xs bg-defi-primary/20 px-2 py-0.5 rounded">+{simulationResult.delta.toFixed(0)} pts</span>
                         </motion.div>
                       )}
                     </div>
