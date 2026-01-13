@@ -3,9 +3,12 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import axios from 'axios';
-import { ArrowLeft, ExternalLink, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ExternalLink, RefreshCw, Clock, AlertTriangle, Brain, Info } from 'lucide-react';
 import RiskGaugeAnimated from '../../components/RiskGaugeAnimated';
 import SHAPExplanationPanel from '../../components/SHAPExplanationPanel';
+import ExplainabilityCard from '../../components/ExplainabilityCard';
+import ConfidenceBadge from '../../components/ConfidenceBadge';
+import ModelTransparencyPanel from '../../components/ModelTransparencyPanel';
 import RiskTimelineChart from '../../components/RiskTimelineChart';
 import FeatureSnapshotPanel from '../../components/FeatureSnapshotPanel';
 import AlertFeed from '../../components/AlertFeed';
@@ -219,6 +222,18 @@ export default function ProtocolDetail() {
                         Model: {riskData.model_version} • Horizon: {riskData.prediction_horizon || '1h'}
                       </div>
                     )}
+
+                    {/* Confidence Badge */}
+                    {riskData.confidence && (
+                      <div className="pt-3 mt-3 border-t border-white/10">
+                        <div className="text-xs text-gray-500 mb-2">Prediction Confidence</div>
+                        <ConfidenceBadge 
+                          confidence={riskData.confidence} 
+                          reason={riskData.confidence_reason}
+                          size="md"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -238,8 +253,15 @@ export default function ProtocolDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* SHAP Explanation */}
-            <SHAPExplanationPanel reasons={riskData?.top_reasons || []} />
+            {/* Explainability Card (Phase 6 Enhanced) */}
+            {riskData && (
+              <ExplainabilityCard 
+                reasons={riskData.enhanced_top_reasons || riskData.top_reasons || []} 
+                explainability={riskData.explainability}
+                confidence={riskData.confidence}
+                confidenceReason={riskData.confidence_reason}
+              />
+            )}
 
             {/* Feature Snapshot */}
             {protocol && (
@@ -250,6 +272,9 @@ export default function ProtocolDetail() {
                 }}
               />
             )}
+
+            {/* Model Transparency (Compact) */}
+            <ModelTransparencyPanel compact />
 
             {/* Alerts for this pool */}
             {alerts.length > 0 && (

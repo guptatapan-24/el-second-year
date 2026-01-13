@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Activity, AlertTriangle, Zap, Menu, X, RefreshCw } from 'lucide-react';
+import { Shield, Activity, AlertTriangle, Zap, Menu, X, RefreshCw, Network } from 'lucide-react';
 import axios from 'axios';
 
 interface LayoutProps {
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/protocols', label: 'Protocols', icon: Shield },
   { href: '/alerts', label: 'Alerts', icon: AlertTriangle },
   { href: '/simulation', label: 'Simulation', icon: Zap },
+  { href: '/architecture', label: 'Architecture', icon: Network },
 ];
 
 export default function Layout({ children }: LayoutProps) {
