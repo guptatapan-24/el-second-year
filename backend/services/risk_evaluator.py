@@ -323,6 +323,31 @@ class RiskEvaluator:
                     )
                     alerts.append(alert)
         
+        # 4. RISK_SPIKE (Phase 5) - Detect sudden risk score jumps
+        # Independent of risk level - captures sudden instability
+        if previous:
+            prev_score = previous.risk_score
+            score_delta = risk_score - prev_score
+            
+            if score_delta >= ALERT_THRESHOLDS.get('risk_spike_delta', 30):
+                if not self.has_recent_alert(pool_id, AlertType.RISK_SPIKE.value):
+                    # Format top reason for spike
+                    reason_text = ""
+                    if top_reasons:
+                        reason_text = f" Key factor: {top_reasons[0].get('feature', 'unknown')}"
+                    
+                    alert = self.create_alert(
+                        pool_id=pool_id,
+                        alert_type=AlertType.RISK_SPIKE.value,
+                        risk_score=risk_score,
+                        risk_level=risk_level,
+                        message=f"Sudden risk spike detected for {pool_id}. Score jumped +{score_delta:.1f} points.{reason_text}",
+                        top_reasons=top_reasons,
+                        previous_risk_level=previous.risk_level,
+                        previous_risk_score=prev_score
+                    )
+                    alerts.append(alert)
+        
         return alerts
     
     def evaluate_all_alerts(self) -> List[Alert]:

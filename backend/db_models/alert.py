@@ -31,6 +31,7 @@ class AlertType(str, enum.Enum):
     HIGH_RISK_ALERT = "HIGH_RISK_ALERT"
     EARLY_WARNING_ALERT = "EARLY_WARNING_ALERT"
     RISK_ESCALATION_ALERT = "RISK_ESCALATION_ALERT"
+    RISK_SPIKE = "RISK_SPIKE"  # Phase 5: Sudden risk score jump >= 30 points
 
 
 class AlertStatus(str, enum.Enum):
@@ -114,6 +115,7 @@ class Alert(Base):
 ALERT_THRESHOLDS = {
     'high_risk_score': 65,
     'early_warning_score': 40,
+    'risk_spike_delta': 30,  # Phase 5: Alert if risk score jumps by >= 30 points
     'escalation_transitions': [
         ('LOW', 'MEDIUM'),
         ('MEDIUM', 'HIGH'),

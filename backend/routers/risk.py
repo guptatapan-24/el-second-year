@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Risk API Router for VeriRisk Phase 3
+Risk API Router for VeriRisk Phase 3 & 5
 
 Clean, minimal APIs for demonstration and evaluation:
 - GET /api/risk/latest/{pool_id} - Latest risk score, level, explanations
@@ -8,6 +8,7 @@ Clean, minimal APIs for demonstration and evaluation:
 - GET /api/alerts - Active alerts across all protocols
 - GET /api/alerts/{pool_id} - Alerts for specific pool
 - GET /api/risk/summary - Risk summary across all pools
+- POST /api/simulate - Run what-if risk simulation (Phase 5)
 
 No authentication required. JSON responses only.
 """
@@ -15,13 +16,14 @@ No authentication required. JSON responses only.
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.risk_evaluator import RiskEvaluator, get_risk_evaluator
+from services.simulation_service import get_simulation_service
 from database import SessionLocal
 from db_models.risk_history import RiskHistory
 from db_models.alert import Alert
@@ -429,5 +431,170 @@ def trigger_all_predictions():
         "status": "success",
         "pools_predicted": len(results),
         "alerts_generated": len(alerts),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+
+# ----- Phase 5: Simulation Endpoints -----
+
+class SimulationRequest(BaseModel):
+    """Request body for risk simulation"""
+    pool_id: str = Field(..., description="Pool identifier to simulate")
+    tvl_change_pct: float = Field(default=0, ge=-80, le=80, description="TVL change percentage (-80 to +80)")
+    volume_change_pct: float = Field(default=0, ge=-100, le=200, description="Volume change percentage (-100 to +200)")
+    volatility_override: Optional[float] = Field(default=None, ge=0.01, le=0.5, description="Override volatility (0.01-0.5)")
+    reserve_imbalance_override: Optional[float] = Field(default=None, ge=0, le=1, description="Override reserve imbalance (0-1)")
+
+
+class RiskDetail(BaseModel):
+    """Risk score details"""
+    score: float
+    level: str
+    early_warning_score: Optional[float] = None
+
+
+class FeatureChange(BaseModel):
+    """Feature value before and after simulation"""
+    before: float
+    after: float
+
+
+class SimulationResponse(BaseModel):
+    """Response from risk simulation"""
+    pool_id: str
+    timestamp: str
+    simulation_params: Dict
+    actual_risk: RiskDetail
+    simulated_risk: RiskDetail
+    delta: float
+    risk_increased: bool
+    alert_would_trigger: bool
+    top_risk_factors: List[Dict]
+    feature_changes: Dict[str, FeatureChange]
+
+
+@router.post("/simulate", response_model=SimulationResponse)
+def run_simulation(request: SimulationRequest):
+    """
+    Run what-if risk simulation for a protocol.
+    
+    Phase 5 Feature: Allows injecting hypothetical shocks into protocol features
+    and re-running ML inference to see predicted impact.
+    
+    **Simulation Parameters:**
+    - `tvl_change_pct`: Simulate TVL increase/decrease (-80% to +80%)
+    - `volume_change_pct`: Simulate volume spike/drop (-100% to +200%)
+    - `volatility_override`: Override current volatility (0.01 to 0.5)
+    - `reserve_imbalance_override`: Override reserve imbalance (0 to 1)
+    
+    **Processing Steps:**
+    1. Fetch latest snapshot for pool
+    2. Apply simulated deltas to feature values
+    3. Re-run ML risk prediction
+    4. Compare simulated vs actual risk
+    
+    **Note:** Simulation is stateless - no data is persisted.
+    
+    **Example Use Cases:**
+    - "What if TVL drops 50%?" → tvl_change_pct=-50
+    - "What if volume spikes 150%?" → volume_change_pct=150
+    - "What if volatility increases to 0.3?" → volatility_override=0.3
+    """
+    simulation_service = get_simulation_service()
+    
+    result = simulation_service.run_simulation(
+        pool_id=request.pool_id,
+        tvl_change_pct=request.tvl_change_pct,
+        volume_change_pct=request.volume_change_pct,
+        volatility_override=request.volatility_override,
+        reserve_imbalance_override=request.reserve_imbalance_override
+    )
+    
+    if 'error' in result:
+        raise HTTPException(
+            status_code=404 if "No data found" in result['error'] else 500,
+            detail=result['error']
+        )
+    
+    return result
+
+
+@router.get("/simulate/presets")
+def get_simulation_presets():
+    """
+    Get predefined simulation scenarios for demo purposes.
+    
+    Returns common DeFi crisis scenarios that can be tested.
+    """
+    return {
+        "presets": [
+            {
+                "id": "tvl_crash",
+                "name": "TVL Crash",
+                "description": "Simulate a 50% sudden drop in Total Value Locked",
+                "params": {
+                    "tvl_change_pct": -50,
+                    "volume_change_pct": 50
+                },
+                "severity": "HIGH",
+                "real_world_example": "Terra/Luna collapse"
+            },
+            {
+                "id": "bank_run",
+                "name": "Bank Run",
+                "description": "Simulate mass withdrawal scenario",
+                "params": {
+                    "tvl_change_pct": -70,
+                    "volume_change_pct": 200
+                },
+                "severity": "CRITICAL",
+                "real_world_example": "FTX withdrawal panic"
+            },
+            {
+                "id": "volume_spike",
+                "name": "Volume Spike",
+                "description": "Simulate unusual trading activity surge",
+                "params": {
+                    "tvl_change_pct": -10,
+                    "volume_change_pct": 150
+                },
+                "severity": "MEDIUM",
+                "real_world_example": "Pre-crash trading activity"
+            },
+            {
+                "id": "liquidity_imbalance",
+                "name": "Liquidity Imbalance",
+                "description": "Simulate severe pool imbalance",
+                "params": {
+                    "tvl_change_pct": -20,
+                    "reserve_imbalance_override": 0.6
+                },
+                "severity": "HIGH",
+                "real_world_example": "Curve pool depeg"
+            },
+            {
+                "id": "volatility_surge",
+                "name": "Volatility Surge",
+                "description": "Simulate market volatility spike",
+                "params": {
+                    "tvl_change_pct": -15,
+                    "volatility_override": 0.35
+                },
+                "severity": "MEDIUM",
+                "real_world_example": "Black swan event"
+            },
+            {
+                "id": "healthy_growth",
+                "name": "Healthy Growth",
+                "description": "Simulate positive protocol growth",
+                "params": {
+                    "tvl_change_pct": 30,
+                    "volume_change_pct": 20
+                },
+                "severity": "LOW",
+                "real_world_example": "Bull market inflow"
+            }
+        ],
         "timestamp": datetime.utcnow().isoformat()
     }
