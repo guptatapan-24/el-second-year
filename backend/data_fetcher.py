@@ -416,6 +416,17 @@ class DataFetcher:
             else:
                 forced_crash_start = None
                 forced_crash_end_protection = None
+            
+            # For late_crash_evolving at fetch_count >= 2, force crash state at end
+            # This ensures pools that have evolved to harmful state show HIGH risk
+            force_late_crash_end = False
+            if risk_profile == "late_crash_evolving" and fetch_count_override is not None:
+                if fetch_count_override >= 2:
+                    force_late_crash_end = True
+                    # Force crash to start 50-80 hours before end (significant period)
+                    forced_crash_start = num_samples - random.randint(50, 80)
+                    # Never recover - keep in crash state until end
+                    forced_crash_end_protection = num_samples
 
             # For late_crash profile, schedule crashes in the last 20% of data (test set coverage)
             late_crash_times = []
@@ -475,6 +486,9 @@ class DataFetcher:
                 else:
                     print(
                         f"   🔴 Fetch #{fetch_count}: {pool_id} becoming HARMFUL (HIGH risk)"
+                    )
+                    print(
+                        f"   ⚠️  Force crash end mode ACTIVE - pool will END in crash state"
                     )
                     evolution_factor = min(
                         fetch_count - 1, 4
@@ -635,9 +649,14 @@ class DataFetcher:
 
                         regime_duration -= 1
                         # For forced pools, don't transition to recovery if we're in the final stretch
-                        if regime_duration <= 0 and (
-                            forced_crash_start is None or i < num_samples - 3
-                        ):
+                        # Also block recovery for late_crash_evolving pools in forced end mode
+                        can_recover = True
+                        if forced_crash_start is not None and i >= num_samples - 3:
+                            can_recover = False
+                        if force_late_crash_end and i >= forced_crash_start:
+                            can_recover = False  # Never recover for harmful late crash pools
+                        
+                        if regime_duration <= 0 and can_recover:
                             regime = "recovery"
                             regime_duration = random.randint(24, 72)  # Recovery period
 
@@ -648,15 +667,25 @@ class DataFetcher:
                         current_tvl *= 1 + recovery_rate + noise
 
                         regime_duration -= 1
+                        # For late_crash_evolving harmful pools, transition back to crash not normal
                         if regime_duration <= 0:
-                            regime = "normal"
+                            if force_late_crash_end and i >= forced_crash_start:
+                                regime = "pre_crash"
+                                regime_duration = random.randint(8, 16)
+                            else:
+                                regime = "normal"
 
                 # Ensure TVL doesn't go negative or too low
                 # For critical pools, allow lower floor since they're always crashing
+                # Also allow lower floor for harmful late_crash_evolving pools
                 if risk_profile == "critical":
                     current_tvl = max(
                         current_tvl, base_tvl * 0.005
                     )  # 0.5% floor for critical
+                elif force_late_crash_end:
+                    current_tvl = max(
+                        current_tvl, base_tvl * 0.01
+                    )  # 1% floor for harmful late crash pools
                 else:
                     current_tvl = max(
                         current_tvl, base_tvl * 0.05
