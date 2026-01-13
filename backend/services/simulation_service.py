@@ -131,42 +131,58 @@ class SimulationService:
             'features': dict(base_features['features'])
         }
         
-        # Apply TVL change
+        # Apply TVL change - GRADUAL for all changes, not just < -20%
         if tvl_change_pct != 0:
             # Modify base TVL
             original_tvl = simulated['base_metrics']['tvl']
             new_tvl = original_tvl * (1 + tvl_change_pct / 100)
             simulated['base_metrics']['tvl'] = max(0, new_tvl)
             
-            # Update TVL change features
+            # Update TVL change features - apply proportionally to ALL changes
             # Simulate as if this change happened in 6h
             simulated['features']['tvl_change_6h'] = tvl_change_pct / 100
             
-            # If significant drop, increase 24h change and acceleration
-            if tvl_change_pct < -20:
-                simulated['features']['tvl_change_24h'] = min(
-                    simulated['features']['tvl_change_24h'],
-                    tvl_change_pct / 100 * 0.8  # 80% impact on 24h
-                )
-                # Accelerating decline
-                simulated['features']['tvl_acceleration'] = tvl_change_pct / 100 * 0.5
-                
-                # Increase early warning score for drops
+            # ALWAYS apply proportional 24h change (scaled by 0.6-0.8 factor)
+            # Even small changes should affect 24h metric
+            change_factor = 0.6 + abs(tvl_change_pct) / 200  # 0.6-0.8 factor based on magnitude
+            simulated['features']['tvl_change_24h'] = min(
+                simulated['features']['tvl_change_24h'],
+                tvl_change_pct / 100 * change_factor
+            )
+            
+            # ALWAYS apply acceleration proportionally for negative changes
+            if tvl_change_pct < 0:
+                # Gradual acceleration based on severity
+                accel_factor = min(0.5, abs(tvl_change_pct) / 100 * 0.6)
+                simulated['features']['tvl_acceleration'] = -accel_factor
+            elif tvl_change_pct > 0:
+                # Positive changes = decelerating risk
+                simulated['features']['tvl_acceleration'] = min(0.1, tvl_change_pct / 100 * 0.2)
+            
+            # GRADUAL early warning score boost - starts from any negative change
+            if tvl_change_pct < 0:
                 drop_severity = abs(tvl_change_pct) / 100
-                ews_boost = min(50, drop_severity * 100)
+                # Quadratic scaling for gradual increase: small drops = small boost, large drops = large boost
+                ews_boost = min(60, drop_severity * drop_severity * 150 + drop_severity * 30)
                 simulated['features']['early_warning_score'] = min(
                     100,
                     simulated['features']['early_warning_score'] + ews_boost
                 )
+            elif tvl_change_pct > 0:
+                # Positive changes can reduce early warning
+                ews_reduction = min(20, tvl_change_pct / 100 * 25)
+                simulated['features']['early_warning_score'] = max(
+                    0,
+                    simulated['features']['early_warning_score'] - ews_reduction
+                )
         
-        # Apply volume change
+        # Apply volume change - GRADUAL for all changes
         if volume_change_pct != 0:
             original_volume = simulated['base_metrics']['volume_24h']
             new_volume = original_volume * (1 + volume_change_pct / 100)
             simulated['base_metrics']['volume_24h'] = max(0, new_volume)
             
-            # Update volume spike ratio
-            # Spike ratio = current / average, so % change directly affects it
+            # Update volume spike ratio proportionally
             original_spike_ratio = simulated['features']['volume_spike_ratio']
             simulated['features']['volume_spike_ratio'] = original_spike_ratio * (1 + volume_change_pct / 100)
             
@@ -174,9 +190,11 @@ class SimulationService:
             simulated['features']['volume_spike_ratio'] = min(10.0, max(0.1, 
                 simulated['features']['volume_spike_ratio']))
             
-            # Volume spikes increase early warning
-            if volume_change_pct > 100:
-                ews_boost = min(30, volume_change_pct / 10)
+            # GRADUAL early warning boost for volume changes (both spikes and drops are concerning)
+            if abs(volume_change_pct) > 30:
+                # Volume anomalies increase early warning proportionally
+                vol_severity = abs(volume_change_pct) / 100
+                ews_boost = min(35, vol_severity * vol_severity * 50 + vol_severity * 15)
                 simulated['features']['early_warning_score'] = min(
                     100,
                     simulated['features']['early_warning_score'] + ews_boost
@@ -265,28 +283,66 @@ class SimulationService:
             prob = float(self.model_server.model.predict_proba(feature_vector)[0][1])
             ml_risk_score = prob * 100
             
-            # Apply feature-based boosters (same logic as model_server)
+            # GRADUAL feature-based boosters (not threshold-based jumps)
             risk_score = ml_risk_score
             
             tvl_change_6h = feature_dict.get('tvl_change_6h', 0)
             tvl_change_24h = feature_dict.get('tvl_change_24h', 0)
             tvl_acceleration = feature_dict.get('tvl_acceleration', 0)
             early_warning_score = feature_dict.get('early_warning_score', 20)
+            volume_spike_ratio = feature_dict.get('volume_spike_ratio', 1.0)
+            reserve_imbalance = feature_dict.get('reserve_imbalance', 0)
+            volatility_6h = feature_dict.get('volatility_6h', 0.02)
             
-            # Boost for severe TVL decline
-            if tvl_change_6h < -0.20 or tvl_change_24h < -0.50:
-                decline_boost = min(30, abs(min(tvl_change_6h, tvl_change_24h)) * 40)
-                risk_score = max(risk_score, 65 + decline_boost)
+            # GRADUAL boost for TVL decline - starts from any decline, scales up
+            if tvl_change_6h < 0 or tvl_change_24h < 0:
+                # Use the more severe decline
+                decline = abs(min(tvl_change_6h, tvl_change_24h))
+                
+                # Gradual scaling formula:
+                # - 0-10% decline: 0-10 points boost
+                # - 10-30% decline: 10-35 points boost  
+                # - 30-50% decline: 35-60 points boost
+                # - 50%+ decline: 60-85 points boost
+                if decline <= 0.10:
+                    decline_boost = decline * 100  # 0-10 points
+                elif decline <= 0.30:
+                    decline_boost = 10 + (decline - 0.10) * 125  # 10-35 points
+                elif decline <= 0.50:
+                    decline_boost = 35 + (decline - 0.30) * 125  # 35-60 points
+                else:
+                    decline_boost = 60 + (decline - 0.50) * 50  # 60-85 points (max ~85)
+                
+                risk_score = risk_score + decline_boost
             
-            # Boost for accelerating decline
-            if tvl_acceleration < -0.05 and (tvl_change_6h < -0.10 or tvl_change_24h < -0.20):
-                accel_boost = min(20, abs(tvl_acceleration) * 200)
-                risk_score = min(100, risk_score + accel_boost)
+            # GRADUAL boost for accelerating decline
+            if tvl_acceleration < 0:
+                accel_severity = abs(tvl_acceleration)
+                # Quadratic scaling for acceleration impact
+                accel_boost = min(25, accel_severity * accel_severity * 500 + accel_severity * 50)
+                risk_score = risk_score + accel_boost
             
-            # Boost for high early warning score
-            if early_warning_score > 70:
-                ews_boost = (early_warning_score - 70) * 0.8
-                risk_score = max(risk_score, 65 + ews_boost)
+            # GRADUAL boost for high early warning score
+            if early_warning_score > 30:
+                # Scale from 30-100: 0-35 points boost
+                ews_boost = (early_warning_score - 30) * 0.5
+                risk_score = risk_score + ews_boost
+            
+            # GRADUAL boost for volume anomalies
+            if volume_spike_ratio > 1.5 or volume_spike_ratio < 0.5:
+                vol_anomaly = abs(volume_spike_ratio - 1.0)
+                vol_boost = min(15, vol_anomaly * 15)
+                risk_score = risk_score + vol_boost
+            
+            # GRADUAL boost for high reserve imbalance
+            if reserve_imbalance > 0.1:
+                imbalance_boost = min(20, (reserve_imbalance - 0.1) * 25)
+                risk_score = risk_score + imbalance_boost
+            
+            # GRADUAL boost for high volatility
+            if volatility_6h > 0.05:
+                vol_boost = min(15, (volatility_6h - 0.05) * 35)
+                risk_score = risk_score + vol_boost
             
             risk_score = round(max(0, min(100, risk_score)), 2)
             

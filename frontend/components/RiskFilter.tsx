@@ -161,7 +161,9 @@ export default function RiskFilter({
                           ? 'bg-defi-secondary text-white'
                           : 'bg-dark-700 text-gray-400 hover:text-white hover:bg-dark-600'
                       }`}
-                      data-testid={`filter-protocol-${proto.toLowerCase().replace(/\s/g, '-')}`}
+                      data-testid={`filter-protocol-${String(proto)
+  .toLowerCase()
+  .replace(/\s+/g, '-')}`}
                     >
                       {proto}
                     </button>
